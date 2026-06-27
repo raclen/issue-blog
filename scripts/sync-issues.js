@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -9,18 +9,21 @@ const rootDir = path.join(__dirname, "..");
 const blogDir = path.join(rootDir, "src/content/blog");
 const metaFile = path.join(blogDir, ".sync-meta.json");
 
-const issueRepo = process.env.ISSUE_REPO || process.env.GITHUB_REPOSITORY;
 const issueLabel = process.env.ISSUE_LABEL || "blog";
 const issueState = process.env.ISSUE_STATE || "open";
 
-if (!issueRepo || !issueRepo.includes("/")) {
-  console.error(
-    "Missing issue repository. Set ISSUE_REPO=owner/repo or run inside GitHub Actions."
-  );
-  process.exit(1);
-}
+function getIssueRepo() {
+  const issueRepo = process.env.ISSUE_REPO || process.env.GITHUB_REPOSITORY;
 
-const [owner, repo] = issueRepo.split("/");
+  if (!issueRepo || !issueRepo.includes("/")) {
+    throw new Error(
+      "Missing issue repository. Set ISSUE_REPO=owner/repo or run inside GitHub Actions."
+    );
+  }
+
+  const [owner, repo] = issueRepo.split("/");
+  return { owner, repo };
+}
 
 function slugify(input) {
   const slug = input
@@ -126,6 +129,7 @@ async function writeMeta(meta) {
 }
 
 async function fetchIssues() {
+  const { owner, repo } = getIssueRepo();
   const headers = {
     Accept: "application/vnd.github+json",
     "X-GitHub-Api-Version": "2022-11-28",
@@ -167,7 +171,7 @@ async function fetchIssues() {
   return issues;
 }
 
-async function sync() {
+export async function syncIssues() {
   await fs.mkdir(blogDir, { recursive: true });
 
   const meta = await readMeta();
@@ -180,7 +184,10 @@ async function sync() {
     const cached = meta.issues[issue.number];
     const nextFilename = filenameForIssue(issue);
 
-    if (cached?.updatedAt === issue.updated_at && cached.filename === nextFilename) {
+    if (
+      cached?.updatedAt === issue.updated_at &&
+      cached.filename === nextFilename
+    ) {
       continue;
     }
 
@@ -217,7 +224,9 @@ async function sync() {
   console.log(`Done. Synced ${changed}, removed ${removed}.`);
 }
 
-sync().catch(error => {
-  console.error(error);
-  process.exit(1);
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  syncIssues().catch(error => {
+    console.error(error);
+    process.exit(1);
+  });
+}
