@@ -1,13 +1,10 @@
 # Issue Blog
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/raclen/issue-blog)
-[![Star History Chart](https://api.star-history.com/svg?repos=raclen/issue-blog&type=Date)](https://star-history.com/#raclen/issue-blog&Date)
 
 Chinese README: [README.md](./README.md)
 
 Issue Blog is a lightweight blog template inspired by `zone/blog`. You write posts in GitHub Issues, sync them into Markdown files, and deploy the generated site to Cloudflare with one click.
-
-If this project helps you, please star the repo. Your support helps me keep improving the theme, sync flow, and deployment experience.
 
 ## What It Solves
 
@@ -87,6 +84,10 @@ Other issue labels become post tags. The `blog` label is only used as the publis
 - Internal team notes
 - Open source project announcements
 - Converting old GitHub Issues into browsable posts
+
+If this project helps you, please star the repo. Your support helps me keep improving the theme, sync flow, and deployment experience.
+
+[![Star History Chart](https://api.star-history.com/svg?repos=raclen/issue-blog&type=Date)](https://star-history.com/#raclen/issue-blog&Date)
 
 ## Local Development
 
