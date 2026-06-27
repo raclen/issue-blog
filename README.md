@@ -1,10 +1,15 @@
 # Issue Blog
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/raclen/issue-blog)
+[![Star History Chart](https://api.star-history.com/svg?repos=raclen/issue-blog&type=Date)](https://star-history.com/#raclen/issue-blog&Date)
+
+English README: [README.en.md](./README.en.md)
 
 一个参考 `zone/blog` 做的轻量博客模板：用 GitHub Issues 写文章，自动同步成仓库里的 Markdown，再一键部署到 Cloudflare。
 
 Issue Blog 适合想写博客、沉淀技术笔记、发布项目日志，但不想维护后台、数据库、CMS 和复杂部署流程的人。你只需要打开 GitHub Issue 写内容，剩下的同步、生成静态页面、RSS 和部署交给仓库自动完成。
+
+如果这个模板对你有帮助，欢迎点个 Star。你的支持会直接推动我继续补强主题、同步能力和部署体验。
 
 ## 它解决什么问题
 
