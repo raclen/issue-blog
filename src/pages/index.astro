@@ -1,0 +1,53 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { formatDate, getPosts } from "@/lib/posts";
+
+const posts = await getPosts();
+---
+
+<BaseLayout
+  title="Issue Blog"
+  description="A Cloudflare-deployable blog powered by GitHub Issues."
+>
+  <main>
+    <section class="hero">
+      <h1>GitHub Issues become a fast static blog.</h1>
+      <p>
+        Add the <code>blog</code> label to an issue, sync it into Markdown, and
+        deploy the generated site to Cloudflare.
+      </p>
+    </section>
+
+    <ul class="post-list">
+      {
+        posts.map(post => (
+          <li class="post-item">
+            <article>
+              <h2>
+                <a href={`/blog/${post.id.replace(/\.(md|mdx)$/i, "")}/`}>
+                  {post.data.title}
+                </a>
+              </h2>
+              <div class="meta">
+                <time datetime={post.data.pubDate.toISOString()}>
+                  {formatDate(post.data.pubDate)}
+                </time>
+                {post.data.issueNumber && <span>Issue #{post.data.issueNumber}</span>}
+              </div>
+              {post.data.description && <p>{post.data.description}</p>}
+              {
+                post.data.tags.length > 0 && (
+                  <div class="tags">
+                    {post.data.tags.map(tag => (
+                      <span class="tag">{tag}</span>
+                    ))}
+                  </div>
+                )
+              }
+            </article>
+          </li>
+        ))
+      }
+    </ul>
+  </main>
+</BaseLayout>

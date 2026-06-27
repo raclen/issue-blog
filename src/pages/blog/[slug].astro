@@ -1,0 +1,50 @@
+---
+import { render } from "astro:content";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { formatDate, getPosts } from "@/lib/posts";
+
+export async function getStaticPaths() {
+  const posts = await getPosts();
+
+  return posts.map(post => ({
+    params: { slug: post.id.replace(/\.(md|mdx)$/i, "") },
+    props: { post },
+  }));
+}
+
+const { post } = Astro.props;
+const { Content } = await render(post);
+---
+
+<BaseLayout title={post.data.title} description={post.data.description}>
+  <main class="article">
+    <article>
+      <h1>{post.data.title}</h1>
+      <div class="meta">
+        <time datetime={post.data.pubDate.toISOString()}>
+          {formatDate(post.data.pubDate)}
+        </time>
+        {
+          post.data.updatedDate && (
+            <span>Updated {formatDate(post.data.updatedDate)}</span>
+          )
+        }
+        {
+          post.data.issueUrl && (
+            <a href={post.data.issueUrl} rel="noreferrer">Discuss on GitHub</a>
+          )
+        }
+      </div>
+      {
+        post.data.tags.length > 0 && (
+          <div class="tags">
+            {post.data.tags.map(tag => (
+              <span class="tag">{tag}</span>
+            ))}
+          </div>
+        )
+      }
+      <Content />
+    </article>
+  </main>
+</BaseLayout>
