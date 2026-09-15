@@ -40,20 +40,50 @@ Issue Blog keeps the entire publishing flow inside GitHub and static hosting.
 
 ## Deploy
 
-Click the **Deploy to Cloudflare** button above and Cloudflare will create a project from this GitHub repository and deploy the static site.
+**No manual fork required.** Click the **Deploy to Cloudflare** button above and Cloudflare will walk you through authorizing GitHub, copy this template into your own account, create the Worker project, and ship the first deployment.
 
-Deployment settings:
+Settings to confirm in the wizard:
 
-- Build command: `npm run build`
-- Output directory: `dist`
-- Node.js: `22`
-- Cloudflare config: `wrangler.jsonc`
+| Setting | Value |
+| --- | --- |
+| Build command | `npm run build` |
+| Deploy command | `npx wrangler deploy` |
+| Output directory | `dist` (declared by `wrangler.jsonc` → `assets.directory`) |
+| Node.js | `22` (pinned in the repo via `.node-version`) |
+| Environment variable | `SITE_URL` — see below |
 
-If you rename or fork this repository, update the repo URL in the button to your own GitHub repository:
+### The one variable you should set: `SITE_URL`
+
+`SITE_URL` drives canonical URLs, RSS links, and the absolute entries in `sitemap-index.xml`. The deploy will still succeed without it, but every link will point at the placeholder `https://example.com` (the build prints a loud warning).
+
+- No custom domain yet: deploy once, grab your `https://<project>.<your-subdomain>.workers.dev` URL, set `SITE_URL` to it in the Cloudflare dashboard, and redeploy once.
+- Custom domain ready: just set `SITE_URL=https://your-domain.com`.
+
+### Two things to do after deploying
+
+The one-click deploy only publishes the **site**. Post syncing runs in GitHub Actions, so also:
+
+1. Open your repository → **Actions** tab → click **Enable workflow** (Actions are disabled by default on forks and newly created repos).
+2. Go to **Sync Issues → Run workflow** and run it once. The job creates the missing `blog` label for you.
+
+After that, open an issue in your repo, add the `blog` label, and Actions commits the Markdown; Cloudflare rebuilds automatically on every new commit.
+
+### I already forked — how do I deploy my own fork?
+
+Heads up: the button in a forked README still points at the upstream template, so clicking it makes Cloudflare copy upstream again instead of deploying your fork. To deploy your own fork, pick one:
+
+- Use the Cloudflare dashboard: **Workers & Pages → Create → Connect to Git**, pick your fork, then fill in the settings table above.
+- Or point the README button at your own repository:
 
 ```md
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/OWNER/REPO)
 ```
+
+### Build failure checklist
+
+- `Cannot find module 'wrangler'`, `pagefind`, or Vite errors: the build environment ran with `NODE_ENV=production`, so `npm ci` skipped devDependencies. The repo ships `.npmrc` (`include=dev`) to prevent this; if you use a custom build image, make sure devDependencies are installed.
+- `Invalid or missing options: ... (description)`: RSS could not resolve its title/description — check `site.title` and `site.description` in `astro-paper.config.ts`.
+- Deploying from your own machine: `npm run deploy` (same as `npm run build && wrangler deploy`).
 
 ## Workflow
 
@@ -150,7 +180,10 @@ issue-blog/
 │   ├── layouts/
 │   ├── lib/
 │   └── pages/
+├── .npmrc
+├── .node-version
 ├── astro.config.mjs
+├── astro-paper.config.ts
 ├── wrangler.jsonc
 └── README.md
 ```

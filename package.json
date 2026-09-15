@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "description": "A Cloudflare-deployable Astro blog that syncs posts from GitHub Issues.",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "astro dev",
     "build": "astro check && astro build",

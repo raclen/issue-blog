@@ -9,7 +9,7 @@ on:
 
 permissions:
   contents: write
-  issues: read
+  issues: write
 
 jobs:
   sync:
@@ -27,6 +27,14 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      # A fresh fork/copy has no labels at all, so issues could never match
+      # the publishing filter. Create the label before syncing.
+      - name: Ensure publish label exists
+        run: gh label create "${ISSUE_LABEL}" --color 0E8A16 --description "Publish this issue as a blog post" --force
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_LABEL: blog
 
       - name: Sync issues to Markdown
         run: npm run sync:issues
