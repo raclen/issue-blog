@@ -40,9 +40,22 @@ Issue Blog keeps the entire publishing flow inside GitHub and static hosting.
 
 ## Deploy
 
-**No manual fork required.** Click the **Deploy to Cloudflare** button above and Cloudflare will walk you through authorizing GitHub, copy this template into your own account, create the Worker project, and ship the first deployment.
+Click the **Deploy to Cloudflare** button above. **No manual fork needed** — Cloudflare copies the template into your own account, creates the Worker project, and ships the first deployment for you.
 
-Settings to confirm in the wizard:
+| Step | What you do | Notes |
+| --- | --- | --- |
+| **1** | Click **Deploy to Cloudflare** | Authorize GitHub; Cloudflare creates your repository copy automatically |
+| **2** | Set the `SITE_URL` environment variable | Your domain, e.g. `https://blog.example.com`. **No domain yet? Skip this step** — nothing else needs to be filled in |
+| **3** | Click **Deploy** and wait 1–2 minutes | You are done when you get `https://<project>.<your-subdomain>.workers.dev` |
+| **4** | Turn on post syncing (once only) | Your new repo → **Actions** → **Enable workflow** → **Sync Issues** → **Run workflow** |
+
+That is the whole setup: open an issue in your repo, add the `blog` label, and the post is synced to Markdown and Cloudflare redeploys automatically.
+
+- You do **not** need to create the `blog` label by hand — the workflow creates it.
+- `SITE_URL` drives canonical URLs, RSS links, and the absolute entries in `sitemap-index.xml`. Deploying without it still works, but every link points at the placeholder `https://example.com` (the build log warns you). No domain yet? Deploy first, copy the `*.workers.dev` URL, set `SITE_URL` in the dashboard, then hit Redeploy once.
+
+<details>
+<summary>Build settings to check in the wizard</summary>
 
 | Setting | Value |
 | --- | --- |
@@ -50,40 +63,35 @@ Settings to confirm in the wizard:
 | Deploy command | `npx wrangler deploy` |
 | Output directory | `dist` (declared by `wrangler.jsonc` → `assets.directory`) |
 | Node.js | `22` (pinned in the repo via `.node-version`) |
-| Environment variable | `SITE_URL` — see below |
 
-### The one variable you should set: `SITE_URL`
+</details>
 
-`SITE_URL` drives canonical URLs, RSS links, and the absolute entries in `sitemap-index.xml`. The deploy will still succeed without it, but every link will point at the placeholder `https://example.com` (the build prints a loud warning).
+<details>
+<summary>I already forked — how do I deploy my own fork?</summary>
 
-- No custom domain yet: deploy once, grab your `https://<project>.<your-subdomain>.workers.dev` URL, set `SITE_URL` to it in the Cloudflare dashboard, and redeploy once.
-- Custom domain ready: just set `SITE_URL=https://your-domain.com`.
+The button in a forked README still points at the upstream template, so clicking it makes Cloudflare copy upstream again instead of deploying your fork. Pick one:
 
-### Two things to do after deploying
-
-The one-click deploy only publishes the **site**. Post syncing runs in GitHub Actions, so also:
-
-1. Open your repository → **Actions** tab → click **Enable workflow** (Actions are disabled by default on forks and newly created repos).
-2. Go to **Sync Issues → Run workflow** and run it once. The job creates the missing `blog` label for you.
-
-After that, open an issue in your repo, add the `blog` label, and Actions commits the Markdown; Cloudflare rebuilds automatically on every new commit.
-
-### I already forked — how do I deploy my own fork?
-
-Heads up: the button in a forked README still points at the upstream template, so clicking it makes Cloudflare copy upstream again instead of deploying your fork. To deploy your own fork, pick one:
-
-- Use the Cloudflare dashboard: **Workers & Pages → Create → Connect to Git**, pick your fork, then fill in the settings table above.
-- Or point the README button at your own repository:
+- **Dashboard**: **Workers & Pages → Create → Connect to Git** → pick your fork → fill in the settings table above.
+- **Change the button**: point the button at your own repository:
 
 ```md
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/OWNER/REPO)
 ```
 
-### Build failure checklist
+</details>
 
-- `Cannot find module 'wrangler'`, `pagefind`, or Vite errors: the build environment ran with `NODE_ENV=production`, so `npm ci` skipped devDependencies. The repo ships `.npmrc` (`include=dev`) to prevent this; if you use a custom build image, make sure devDependencies are installed.
-- `Invalid or missing options: ... (description)`: RSS could not resolve its title/description — check `site.title` and `site.description` in `astro-paper.config.ts`.
-- Deploying from your own machine: `npm run deploy` (same as `npm run build && wrangler deploy`).
+<details>
+<summary>Build failure checklist</summary>
+
+| Symptom | Fix |
+| --- | --- |
+| `Cannot find module 'wrangler'`, `pagefind`, or Vite errors | The build ran with `NODE_ENV=production`, so `npm ci` skipped devDependencies. The repo ships `.npmrc` (`include=dev`) to prevent this; with a custom build image, make sure devDependencies are installed |
+| `Invalid or missing options: ... (description)` | `site.title` / `site.description` in `astro-paper.config.ts` must not be empty |
+| Every link points at `example.com` | `SITE_URL` is not set — set it and redeploy |
+
+You can also deploy from your own machine instead of the dashboard: `npm run deploy` (same as `npm run build && wrangler deploy`).
+
+</details>
 
 ## Workflow
 
@@ -122,26 +130,13 @@ If this project helps you, please star the repo. Your support helps me keep impr
 ## Local Development
 
 ```bash
-npm install
-npm run dev
-```
+npm install          # install dependencies
+npm run dev          # local dev server (http://localhost:4321)
+npm run build        # build to dist/
+npm run deploy       # build and deploy to Cloudflare
 
-Sync issues from a specific repository locally:
-
-```bash
+# sync issues from a specific repository
 ISSUE_REPO=OWNER/REPO GITHUB_TOKEN=YOUR_TOKEN npm run sync:issues
-```
-
-Build:
-
-```bash
-npm run build
-```
-
-Deploy:
-
-```bash
-npm run deploy
 ```
 
 ## Issue Metadata

@@ -40,9 +40,22 @@ Issue Blog 适合想写博客、沉淀技术笔记、发布项目日志，但不
 
 ## 一键部署
 
-**不需要手动 fork**。点上面的 **Deploy to Cloudflare** 按钮，Cloudflare 会引导你授权 GitHub、自动把本模板复制到你的账号下、创建 Worker 项目并完成首次部署。
+点上面的 **Deploy to Cloudflare** 按钮即可，**不需要手动 fork** —— Cloudflare 会自动把模板复制到你的账号、建好 Worker 项目并完成首次部署。
 
-部署向导中需要确认的配置：
+| 步骤 | 操作 | 说明 |
+| --- | --- | --- |
+| **1** | 点 **Deploy to Cloudflare** | 授权 GitHub，Cloudflare 自动创建你的仓库副本 |
+| **2** | 设置环境变量 `SITE_URL` | 填你的域名，如 `https://blog.example.com`。**还没域名可以跳过这一步**，其它什么都不用填 |
+| **3** | 点 **Deploy** 并等待 1~2 分钟 | 出现 `https://<项目名>.<你的子域>.workers.dev` 就是成功了 |
+| **4** | 启用文章自动同步（只做一次） | 你的新仓库 → **Actions** → **Enable workflow** → **Sync Issues** → **Run workflow** |
+
+四步做完就能用了：在仓库里新建 Issue 并打上 `blog` 标签，文章会自动同步成 Markdown，并触发 Cloudflare 重新部署。
+
+- `blog` 标签不用手动创建，工作流会自动补上。
+- `SITE_URL` 决定 canonical、RSS 和 `sitemap-index.xml` 里的绝对地址。不填也能部署成功，只是链接会指向占位的 `https://example.com`（构建日志里会有提醒）。没有域名时：先部署，拿到 `*.workers.dev` 地址后回控制台填 `SITE_URL`，再点一次 Redeploy。
+
+<details>
+<summary>向导里的构建配置对照表</summary>
 
 | 配置项 | 值 |
 | --- | --- |
@@ -50,40 +63,35 @@ Issue Blog 适合想写博客、沉淀技术笔记、发布项目日志，但不
 | Deploy command | `npx wrangler deploy` |
 | Output directory | `dist`（由 `wrangler.jsonc` 的 `assets.directory` 指定） |
 | Node.js | `22`（仓库已通过 `.node-version` 固定） |
-| 环境变量 | `SITE_URL` —— 见下 |
 
-### 唯一建议手动设置的变量：`SITE_URL`
+</details>
 
-`SITE_URL` 决定 canonical URL、RSS 订阅链接和 `sitemap-index.xml` 里的绝对地址。不设置也能部署成功，但所有链接都会指向占位的 `https://example.com`（构建日志里会有醒目警告）。
+<details>
+<summary>我已经 fork 了，怎么部署我自己的仓库？</summary>
 
-- 还没绑定域名：先部署一次，拿到 `https://<项目名>.<你的子域>.workers.dev` 之后回控制台把 `SITE_URL` 改成它，再点一次重新部署。
-- 已有自定义域名：直接填 `https://你的域名`。
+fork 出来的 README 里按钮仍然指向上游模板，点它会让 Cloudflare 再复制一份上游仓库，而不是部署你的 fork。二选一：
 
-### 部署完成后的两件事
-
-一键部署只负责「发布站点」；文章同步依赖 GitHub Actions，所以还要：
-
-1. 打开你自己的仓库 → **Actions** 页签 → 点 **Enable workflow**（fork 与新建仓库的 Actions 默认是关闭的）。
-2. 进入 **Sync Issues → Run workflow** 手动跑一次。工作流会自动创建缺失的 `blog` 标签。
-
-之后在仓库里新建 Issue、打上 `blog` 标签，Actions 会把内容同步成 Markdown 并提交，Cloudflare 检测到新提交后自动重新部署。
-
-### 我已经 fork 了，怎么部署我自己的仓库
-
-注意：fork 出来的 README 里按钮仍然指向上游模板，点它会让 Cloudflare 再复制一份上游仓库，而不是部署你的 fork。想部署自己的 fork，二选一：
-
-- 用 Cloudflare 控制台：**Workers & Pages → Create → Connect to Git**，选择你的 fork，再按上表填写构建配置。
-- 或者把 README 顶部按钮里的仓库地址换成你自己的：
+- **控制台方式**：**Workers & Pages → Create → Connect to Git** → 选你的 fork → 按上面的对照表填构建配置。
+- **改按钮**：把本文件顶部按钮里的仓库地址换成你自己的：
 
 ```md
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/OWNER/REPO)
 ```
 
-### 构建失败自查
+</details>
 
-- 报 `Cannot find module 'wrangler'`、`pagefind` 或 Vite 相关错误：说明构建环境开启了 `NODE_ENV=production`，导致 `npm ci` 跳过 devDependencies。仓库里已经放了 `.npmrc`（`include=dev`）来规避；如果你用了自定义构建镜像，请确保安装 devDependencies。
-- 报 `Invalid or missing options: ... (description)`：RSS 的标题/描述读取失败，检查 `astro-paper.config.ts` 的 `site.title` 与 `site.description` 是否为空。
-- 本地直接部署：`npm run deploy`（等价于 `npm run build && wrangler deploy`）。
+<details>
+<summary>部署失败排查</summary>
+
+| 现象 | 处理 |
+| --- | --- |
+| `Cannot find module 'wrangler'`、`pagefind` 或 Vite 相关报错 | 构建环境开启了 `NODE_ENV=production`，导致 `npm ci` 跳过 devDependencies。仓库已内置 `.npmrc`（`include=dev`）规避；若你用了自定义构建镜像，请确保安装 devDependencies |
+| `Invalid or missing options: ... (description)` | `astro-paper.config.ts` 的 `site.title` / `site.description` 不能为空 |
+| 链接都指向 `example.com` | 没有设置 `SITE_URL`，补齐后重新部署 |
+
+部署到自己的账号之外，也可以本地直接部署：`npm run deploy`（等价于 `npm run build && wrangler deploy`）。
+
+</details>
 
 ## 工作流
 
@@ -122,26 +130,13 @@ Issue 的其他标签会变成文章标签，`blog` 标签只用于筛选文章�
 ## 本地开发
 
 ```bash
-npm install
-npm run dev
-```
+npm install          # 安装依赖
+npm run dev          # 本地开发（默认 http://localhost:4321）
+npm run build        # 构建到 dist/
+npm run deploy       # 构建并部署到 Cloudflare
 
-本地同步当前仓库 Issues：
-
-```bash
+# 手动同步指定仓库的 Issues
 ISSUE_REPO=OWNER/REPO GITHUB_TOKEN=YOUR_TOKEN npm run sync:issues
-```
-
-构建：
-
-```bash
-npm run build
-```
-
-部署：
-
-```bash
-npm run deploy
 ```
 
 ## Issue 元数据
