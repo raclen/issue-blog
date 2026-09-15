@@ -1,53 +1,42 @@
 ---
-import BaseLayout from "@/layouts/BaseLayout.astro";
-import { formatDate, getPosts } from "@/lib/posts";
+import FuwariBlogLayout from "@/layouts/FuwariBlogLayout.astro";
+import FuwariBentoCard from "@/components/fuwari/FuwariBentoCard.astro";
+import { getPosts } from "@/lib/posts";
+import config from "@/config";
 
 const posts = await getPosts();
+
+const tagCounts = new Map<string, number>();
+const yearCounts = new Map<string, number>();
+
+for (const post of posts) {
+  for (const tag of post.data.tags) {
+    tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
+  }
+
+  const year = post.data.pubDate.getFullYear().toString();
+  yearCounts.set(year, (yearCounts.get(year) ?? 0) + 1);
+}
+
+const tags = Array.from(tagCounts, ([tag, count]) => ({ tag, count })).sort(
+  (a, b) => b.count - a.count || a.tag.localeCompare(b.tag, "zh-CN")
+);
+const years = Array.from(yearCounts, ([year, count]) => ({ year, count })).sort(
+  (a, b) => Number(b.year) - Number(a.year)
+);
 ---
 
-<BaseLayout
-  title="Issue Blog"
-  description="A Cloudflare-deployable blog powered by GitHub Issues."
+<FuwariBlogLayout
+  title={config.site.title}
+  description={config.site.description}
+  postsCount={posts.length}
+  years={years}
+  tags={tags}
+  showBanner={true}
+  bannerTitle={config.site.title}
+  bannerSubtitle={config.site.description}
 >
-  <main>
-    <section class="hero">
-      <h1>GitHub Issues become a fast static blog.</h1>
-      <p>
-        Add the <code>blog</code> label to an issue, sync it into Markdown, and
-        deploy the generated site to Cloudflare.
-      </p>
-    </section>
-
-    <ul class="post-list">
-      {
-        posts.map(post => (
-          <li class="post-item">
-            <article>
-              <h2>
-                <a href={`/blog/${post.id.replace(/\.(md|mdx)$/i, "")}/`}>
-                  {post.data.title}
-                </a>
-              </h2>
-              <div class="meta">
-                <time datetime={post.data.pubDate.toISOString()}>
-                  {formatDate(post.data.pubDate)}
-                </time>
-                {post.data.issueNumber && <span>Issue #{post.data.issueNumber}</span>}
-              </div>
-              {post.data.description && <p>{post.data.description}</p>}
-              {
-                post.data.tags.length > 0 && (
-                  <div class="tags">
-                    {post.data.tags.map(tag => (
-                      <span class="tag">{tag}</span>
-                    ))}
-                  </div>
-                )
-              }
-            </article>
-          </li>
-        ))
-      }
-    </ul>
-  </main>
-</BaseLayout>
+  <div class="space-y-4">
+    {posts.map(post => <FuwariBentoCard post={post} />)}
+  </div>
+</FuwariBlogLayout>

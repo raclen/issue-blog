@@ -1,0 +1,195 @@
+---
+// Fuwari 风格弹窗搜索组件：支持 Pagefind 客户端极速搜索与全局快捷键 Ctrl+K / Cmd+K
+---
+
+<!-- 搜索触发浮层模态框 -->
+<div
+  id="fuwari-search-modal"
+  class="fixed inset-0 z-[100] hidden items-start justify-center p-4 sm:p-6 md:p-14 bg-black/50 backdrop-blur-sm transition-all duration-200"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="search-input-title"
+>
+  <!-- 点击遮罩关闭 -->
+  <div id="search-modal-backdrop" class="fixed inset-0" aria-hidden="true"></div>
+
+  <!-- 搜索面板卡片 (对齐 Fuwari SearchPanel) -->
+  <div
+    class="relative w-full max-w-2xl fuwari-card bg-background/95 border border-border shadow-2xl overflow-hidden flex flex-col max-h-[80vh] z-10 animate-in fade-in zoom-in-95 duration-150"
+  >
+    <!-- 头部搜索输入栏 -->
+    <div class="flex items-center px-4 py-3 border-b border-border/70 gap-3">
+      <svg class="w-5 h-5 text-accent shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      </svg>
+      <input
+        id="fuwari-search-input"
+        type="text"
+        placeholder="搜索文章标题、内容或标签..."
+        autocomplete="off"
+        class="flex-1 bg-transparent border-none text-foreground placeholder:text-muted-foreground text-sm sm:text-base focus:outline-none"
+      />
+      <div class="hidden sm:flex items-center gap-1 text-[11px] text-muted-foreground bg-muted px-2 py-0.5 rounded border border-border">
+        <span>ESC</span>
+      </div>
+      <button
+        id="close-search-btn"
+        class="text-muted-foreground hover:text-foreground p-1 rounded-lg transition-colors"
+        aria-label="关闭搜索"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- 搜索结果列表容器 -->
+    <div id="search-results" class="overflow-y-auto p-3 space-y-2 divide-y divide-border/30 max-h-[60vh]">
+      <div id="search-placeholder" class="py-12 text-center text-xs sm:text-sm text-muted-foreground">
+        输入关键字快速查找全站文章...
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Pagefind 客户端动态调用与 Modal 交互管理
+  let pagefindInstance: any = null;
+
+  async function getPagefind() {
+    if (pagefindInstance) return pagefindInstance;
+    try {
+      // 动态载入 static pagefind.js
+      const scriptUrl = "/pagefind/pagefind.js";
+      pagefindInstance = await import(/* @vite-ignore */ scriptUrl);
+      await pagefindInstance.options({
+        ranking: {
+          pageLength: 0.5,
+          termFrequency: 1.0,
+          termSaturation: 1.4,
+        }
+      });
+      return pagefindInstance;
+    } catch (e) {
+      console.warn("Pagefind not initialized yet:", e);
+      return null;
+    }
+  }
+
+  function initSearchModal() {
+    const modal = document.getElementById("fuwari-search-modal");
+    const input = document.getElementById("fuwari-search-input") as HTMLInputElement | null;
+    const backdrop = document.getElementById("search-modal-backdrop");
+    const closeBtn = document.getElementById("close-search-btn");
+    const resultsContainer = document.getElementById("search-results");
+    const openBtns = document.querySelectorAll("[data-open-search]");
+
+    if (!modal || !input) return;
+
+    function openModal() {
+      modal?.classList.remove("hidden");
+      modal?.classList.add("flex");
+      input?.focus();
+      document.body.style.overflow = "hidden";
+      getPagefind(); // 预热 pagefind
+    }
+
+    function closeModal() {
+      modal?.classList.add("hidden");
+      modal?.classList.remove("flex");
+      document.body.style.overflow = "";
+      if (input) input.value = "";
+      if (resultsContainer) {
+        resultsContainer.innerHTML = '<div class="py-12 text-center text-xs sm:text-sm text-muted-foreground">输入关键字快速查找全站文章...</div>';
+      }
+    }
+
+    // 绑定所有打开按钮与关闭动作 (使用 onclick 保证幂等绑定)
+    openBtns.forEach(btn => {
+      (btn as HTMLElement).onclick = openModal;
+    });
+
+    if (backdrop) backdrop.onclick = closeModal;
+    if (closeBtn) (closeBtn as HTMLElement).onclick = closeModal;
+
+    // 全局快捷键 Ctrl+K / Cmd+K 打开，ESC 关闭（仅在全局注册一次）
+    if (!(window as any).__fuwariSearchKeydownBound) {
+      (window as any).__fuwariSearchKeydownBound = true;
+      window.addEventListener("keydown", (e) => {
+        const currentModal = document.getElementById("fuwari-search-modal");
+        const currentInput = document.getElementById("fuwari-search-input") as HTMLInputElement | null;
+        if (!currentModal) return;
+
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+          e.preventDefault();
+          if (currentModal.classList.contains("hidden")) {
+            currentModal.classList.remove("hidden");
+            currentModal.classList.add("flex");
+            currentInput?.focus();
+            document.body.style.overflow = "hidden";
+            getPagefind();
+          } else {
+            currentModal.classList.add("hidden");
+            currentModal.classList.remove("flex");
+            document.body.style.overflow = "";
+          }
+        }
+        if (e.key === "Escape" && !currentModal.classList.contains("hidden")) {
+          currentModal.classList.add("hidden");
+          currentModal.classList.remove("flex");
+          document.body.style.overflow = "";
+        }
+      });
+    }
+
+    // 实时搜索防抖
+    let debounceTimer: any;
+    input.oninput = () => {
+      clearTimeout(debounceTimer);
+      const query = input.value.trim();
+      if (!query) {
+        if (resultsContainer) {
+          resultsContainer.innerHTML = '<div class="py-12 text-center text-xs sm:text-sm text-muted-foreground">输入关键字快速查找全站文章...</div>';
+        }
+        return;
+      }
+
+      debounceTimer = setTimeout(async () => {
+        const pf = await getPagefind();
+        if (!pf) {
+          if (resultsContainer) {
+            resultsContainer.innerHTML = '<div class="py-8 text-center text-xs text-muted-foreground">搜索索引加载中，请稍候...</div>';
+          }
+          return;
+        }
+
+        const search = await pf.search(query);
+        const results = await Promise.all(search.results.slice(0, 10).map((r: any) => r.data()));
+
+        if (!results || results.length === 0) {
+          if (resultsContainer) {
+            resultsContainer.innerHTML = `<div class="py-8 text-center text-xs text-muted-foreground">未找到关于 <span class="font-bold text-accent">"${query}"</span> 的文章结果</div>`;
+          }
+          return;
+        }
+
+        if (resultsContainer) {
+          resultsContainer.innerHTML = results.map((item: any) => {
+            return `
+              <a href="${item.url}" class="block p-3 rounded-xl hover:bg-accent/10 transition-colors group">
+                <div class="text-sm sm:text-base font-semibold text-foreground group-hover:text-accent transition-colors flex items-center gap-2">
+                  <span class="w-1.5 h-1.5 rounded-full bg-accent"></span>
+                  <span>${item.meta.title || item.url}</span>
+                </div>
+                ${item.excerpt ? `<p class="text-xs text-muted-foreground mt-1.5 line-clamp-2 leading-relaxed">${item.excerpt}</p>` : ''}
+              </a>
+            `;
+          }).join("");
+        }
+      }, 150);
+    };
+  }
+
+  // 挂载执行
+  document.addEventListener("astro:page-load", initSearchModal);
+</script>

@@ -1,0 +1,127 @@
+---
+import type { CollectionEntry } from "astro:content";
+import { toTransitionName } from "@/utils/toTransitionName";
+import { getReadingTime } from "@/utils/readingTime";
+import { getTagUrl } from "@/utils/tagUrl";
+
+type Props = {
+  post: CollectionEntry<"blog">;
+};
+
+const { post } = Astro.props;
+const { id, data, body } = post;
+const { title, description, tags = [] } = data;
+
+// 计算字数与阅读时长
+const reading = getReadingTime(body || "");
+const postUrl = `/blog/${id.replace(/\.(md|mdx)$/i, "")}/`;
+---
+
+<article class="fuwari-card fuwari-card-hover group relative mb-4 flex flex-col md:flex-row overflow-hidden border border-border/70">
+  <!-- 悬浮主色装饰侧条 -->
+  <div class="fuwari-accent-bar"></div>
+
+  <!-- 文章信息主体 -->
+  <div class="flex-1 p-4 sm:p-5 flex flex-col justify-between">
+    <div>
+      <!-- 头部元数据行：时间 + Issue编号 + 字数 + 阅读时长 -->
+      <div class="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mb-1.5">
+        <time datetime={data.pubDate.toISOString()}>
+          {new Intl.DateTimeFormat("zh-CN", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+          }).format(data.pubDate)}
+        </time>
+
+        {data.issueNumber && (
+          <>
+            <span class="opacity-40">·</span>
+            <span class="inline-flex items-center gap-1 font-mono text-accent">
+              <svg class="w-3.5 h-3.5 opacity-80" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+              </svg>
+              Issue #{data.issueNumber}
+            </span>
+          </>
+        )}
+
+        <span class="opacity-40">·</span>
+        <span class="flex items-center gap-1">
+          <svg class="w-3.5 h-3.5 opacity-70" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+          </svg>
+          {reading.words} 字
+        </span>
+        <span class="opacity-40">·</span>
+        <span class="flex items-center gap-1">
+          <svg class="w-3.5 h-3.5 opacity-70" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          {reading.minutes} 分钟
+        </span>
+      </div>
+
+      <!-- 标题：字号收紧为精致的 lg sm:text-xl -->
+      <h3 class="text-base sm:text-lg font-bold tracking-tight mb-2 leading-snug">
+        <a
+          href={postUrl}
+          class="text-foreground group-hover:text-accent transition-colors duration-200 inline-block line-clamp-2"
+        >
+          <span transition:name={toTransitionName(title)}>
+            {title}
+          </span>
+        </a>
+      </h3>
+
+      <!-- 简介摘要：字号与行高收敛 -->
+      {description && (
+        <p class="text-xs sm:text-sm text-muted-foreground line-clamp-2 leading-relaxed mb-3">
+          {description}
+        </p>
+      )}
+    </div>
+
+    <!-- 底部标签行与进入阅读按钮 -->
+    <div class="flex items-center justify-between pt-2 border-t border-border/40 mt-auto">
+      <div class="flex flex-wrap gap-1 items-center">
+        {tags.slice(0, 3).map((tag: string) => (
+          <a
+            href={getTagUrl(tag)}
+            class="fuwari-pill text-[11px] py-0.5 px-2 hover:bg-accent hover:text-white transition-colors"
+          >
+            #{tag}
+          </a>
+        ))}
+      </div>
+
+      <div class="flex items-center gap-3">
+        {data.issueUrl && (
+          <a
+            href={data.issueUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-[11px] text-muted-foreground hover:text-accent transition-colors flex items-center gap-1"
+            title="在 GitHub Issue 上查看或讨论"
+          >
+            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+              <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+            </svg>
+            Issue
+          </a>
+        )}
+
+        <a
+          href={postUrl}
+          aria-label={`阅读全文: ${title}`}
+          class="inline-flex items-center gap-1 text-xs font-semibold text-accent hover:underline group-hover:translate-x-1 transition-transform"
+        >
+          阅读全文
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+        </a>
+      </div>
+    </div>
+  </div>
+</article>

@@ -1,0 +1,244 @@
+---
+import { getRelativeLocaleUrl } from "astro:i18n";
+import IconSunHigh from "@/assets/icons/IconSunHigh.svg";
+import IconMoon from "@/assets/icons/IconMoon.svg";
+import FuwariSearchModal from "./fuwari/FuwariSearchModal.astro";
+import config from "@/config";
+
+const { site, socials } = config;
+const locale = Astro.currentLocale ?? config.site.lang;
+
+const githubSocial = socials.find(s => s.name.toLowerCase() === "github");
+const githubUrl = githubSocial?.url || site.profile;
+
+const currentPath = Astro.url.pathname;
+const isActive = (path: string) => {
+  if (path === "/" && (currentPath === "/" || currentPath === "")) return true;
+  if (path === "/archives" && currentPath.startsWith("/archives")) return true;
+  if (path === "/tags" && currentPath.startsWith("/tags")) return true;
+  return false;
+};
+---
+
+<!-- 顶部常规导航栏 (自然随页面滚动，不吸顶) -->
+<header class="relative z-40 w-full transition-all duration-300">
+  <div class="max-w-[75rem] mx-auto px-4 sm:px-6 w-full pt-2 sm:pt-3">
+    <div
+      class="fuwari-card !rounded-2xl h-14 sm:h-16 px-3 sm:px-5 flex items-center justify-between shadow-sm bg-background/80 backdrop-blur-md border border-border/80"
+    >
+      <!-- 左侧站点 Logo / 标题，点击返回首页 -->
+      <a
+        href={getRelativeLocaleUrl(locale, "")}
+        class="flex items-center gap-2 font-bold text-base sm:text-lg text-foreground hover:text-accent transition-colors shrink-0 group px-2 py-1.5 rounded-lg"
+      >
+        <div class="w-8 h-8 rounded-xl bg-accent/15 flex items-center justify-center text-accent group-hover:bg-accent group-hover:text-accent-foreground transition-all">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 3L2 12h3v8h6v-6h2v6h6v-8h3L12 3z"/>
+          </svg>
+        </div>
+        <span class="tracking-tight">{site.title}</span>
+      </a>
+
+      <!-- 中间菜单导航项（大屏展示，圆角悬浮背景态） -->
+      <nav class="hidden md:flex items-center gap-1 sm:gap-2">
+        <a
+          href={getRelativeLocaleUrl(locale, "")}
+          class:list={[
+            "px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition-all",
+            isActive("/")
+              ? "bg-accent text-accent-foreground shadow-sm"
+              : "text-foreground/75 hover:text-foreground hover:bg-muted/80"
+          ]}
+        >
+          首页
+        </a>
+        <a
+          href={getRelativeLocaleUrl(locale, "archives")}
+          class:list={[
+            "px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition-all",
+            isActive("/archives")
+              ? "bg-accent text-accent-foreground shadow-sm"
+              : "text-foreground/75 hover:text-foreground hover:bg-muted/80"
+          ]}
+        >
+          归档
+        </a>
+        <a
+          href={getRelativeLocaleUrl(locale, "tags")}
+          class:list={[
+            "px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition-all",
+            isActive("/tags")
+              ? "bg-accent text-accent-foreground shadow-sm"
+              : "text-foreground/75 hover:text-foreground hover:bg-muted/80"
+          ]}
+        >
+          标签
+        </a>
+      </nav>
+
+      <!-- 右侧操作工具栏：搜索呼出、明暗主题切换、GitHub、移动端汉堡菜单 -->
+      <div class="flex items-center gap-1.5 sm:gap-2">
+        <!-- 搜索按钮（对标 Fuwari Search 触发器） -->
+        <button
+          type="button"
+          data-open-search
+          class="w-9 h-9 rounded-xl flex items-center justify-center text-foreground/75 hover:text-accent hover:bg-accent/10 transition-colors"
+          title="搜索 (Ctrl+K)"
+          aria-label="搜索全站文章"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </button>
+
+        <!-- 暗黑模式切换按钮 -->
+        <button
+          id="theme-btn"
+          type="button"
+          class="w-9 h-9 rounded-xl flex items-center justify-center text-foreground/75 hover:text-accent hover:bg-accent/10 transition-colors"
+          title="切换日夜模式"
+          aria-label="切换明暗主题"
+        >
+          <IconSunHigh class="w-4 h-4 hidden dark:block" />
+          <IconMoon class="w-4 h-4 block dark:hidden" />
+        </button>
+
+        {githubUrl && (
+          <a
+            href={githubUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="hidden sm:flex w-9 h-9 rounded-xl items-center justify-center text-foreground/75 hover:text-accent hover:bg-accent/10 transition-colors"
+            title="GitHub 仓库"
+            aria-label="GitHub 仓库"
+          >
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+              <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+            </svg>
+          </a>
+        )}
+
+        <!-- 移动端展开抽屉按钮 -->
+        <button
+          id="mobile-menu-toggle"
+          type="button"
+          class="md:hidden w-9 h-9 rounded-xl flex items-center justify-center text-foreground/75 hover:text-accent hover:bg-accent/10 transition-colors"
+          title="展开导航菜单"
+          aria-label="移动端菜单"
+          aria-expanded="false"
+          aria-controls="mobile-menu-panel"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- 移动端展开悬浮面板 -->
+    <div
+      id="mobile-menu-panel"
+      class="hidden md:hidden fuwari-card mt-2 p-3 bg-background/95 backdrop-blur-md border border-border shadow-lg transition-all"
+    >
+      <div class="flex flex-col gap-1 text-sm font-semibold">
+        <a
+          href={getRelativeLocaleUrl(locale, "")}
+          class:list={[
+            "px-3 py-2 rounded-lg transition-all",
+            isActive("/")
+              ? "bg-accent text-accent-foreground font-semibold"
+              : "text-foreground/80 hover:text-foreground hover:bg-muted/80 font-medium"
+          ]}
+        >
+          首页
+        </a>
+        <a
+          href={getRelativeLocaleUrl(locale, "archives")}
+          class:list={[
+            "px-3 py-2 rounded-lg transition-all",
+            isActive("/archives")
+              ? "bg-accent text-accent-foreground font-semibold"
+              : "text-foreground/80 hover:text-foreground hover:bg-muted/80 font-medium"
+          ]}
+        >
+          归档
+        </a>
+        <a
+          href={getRelativeLocaleUrl(locale, "tags")}
+          class:list={[
+            "px-3 py-2 rounded-lg transition-all",
+            isActive("/tags")
+              ? "bg-accent text-accent-foreground font-semibold"
+              : "text-foreground/80 hover:text-foreground hover:bg-muted/80 font-medium"
+          ]}
+        >
+          标签
+        </a>
+        <a
+          href="/rss.xml"
+          target="_blank"
+          class="px-3 py-2 rounded-lg text-foreground/80 hover:text-foreground hover:bg-muted/80 font-medium transition-all flex items-center justify-between"
+        >
+          <span>RSS 订阅</span>
+          <svg class="w-3.5 h-3.5 opacity-60" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+          </svg>
+        </a>
+        {githubUrl && (
+          <a
+            href={githubUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="px-3 py-2 rounded-lg text-foreground/80 hover:text-foreground hover:bg-muted/80 font-medium transition-all flex items-center justify-between"
+          >
+            <span>GitHub</span>
+            <svg class="w-3.5 h-3.5 opacity-60" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+          </a>
+        )}
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- 全局搜索 Modal 浮层挂载 -->
+<FuwariSearchModal />
+
+<script>
+  function setupHeader() {
+    const menuBtn = document.getElementById("mobile-menu-toggle");
+    const menuPanel = document.getElementById("mobile-menu-panel");
+    if (!menuBtn || !menuPanel) return;
+
+    // 使用 onclick 确保单次绑定，避免 addEventListener 重复注册导致 toggle 互相抵消
+    menuBtn.onclick = (e) => {
+      e.stopPropagation();
+      const isHidden = menuPanel.classList.toggle("hidden");
+      menuBtn.setAttribute("aria-expanded", String(!isHidden));
+    };
+
+    // 点击菜单项后自动收起菜单
+    menuPanel.querySelectorAll("a").forEach((link) => {
+      link.onclick = () => {
+        menuPanel.classList.add("hidden");
+        menuBtn.setAttribute("aria-expanded", "false");
+      };
+    });
+  }
+
+  // 点击页面外部区域自动收起移动端菜单
+  document.addEventListener("click", (e) => {
+    const menuBtn = document.getElementById("mobile-menu-toggle");
+    const menuPanel = document.getElementById("mobile-menu-panel");
+    if (menuPanel && !menuPanel.classList.contains("hidden")) {
+      const target = e.target as Node;
+      if (!menuBtn?.contains(target) && !menuPanel.contains(target)) {
+        menuPanel.classList.add("hidden");
+        menuBtn?.setAttribute("aria-expanded", "false");
+      }
+    }
+  });
+
+  document.addEventListener("astro:page-load", setupHeader);
+</script>

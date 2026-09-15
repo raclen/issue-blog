@@ -1,0 +1,40 @@
+---
+import { getTagUrl } from "@/utils/tagUrl";
+
+interface Props {
+  tags: { tag: string; count?: number }[];
+  limit?: number;
+}
+
+const { tags = [], limit = 15 } = Astro.props;
+const displayTags = tags.slice(0, limit);
+---
+
+<div class="fuwari-card p-5 mt-4">
+  <div class="flex items-center justify-between mb-3.5">
+    <div class="flex items-center gap-2">
+      <span class="w-1.5 h-4 rounded-full bg-accent"></span>
+      <h4 class="font-bold text-sm text-foreground">标签云</h4>
+    </div>
+    <a href="/tags" class="text-xs text-muted-foreground hover:text-accent transition-colors">
+      全部 ({tags.length}) →
+    </a>
+  </div>
+
+  <div class="flex flex-wrap gap-2">
+    {displayTags.map(item => (
+      <a
+        href={getTagUrl(item.tag)}
+        class="fuwari-pill text-xs hover:border-accent/40"
+      >
+        <span>#{item.tag}</span>
+        {item.count !== undefined && (
+          <span class="ml-1 text-[10px] opacity-60">({item.count})</span>
+        )}
+      </a>
+    ))}
+    {tags.length === 0 && (
+      <span class="text-xs text-muted-foreground">暂无标签</span>
+    )}
+  </div>
+</div>

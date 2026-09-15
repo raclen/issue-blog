@@ -1,0 +1,33 @@
+---
+interface Props {
+  years: { year: string; count: number }[];
+}
+
+const { years = [] } = Astro.props;
+---
+
+<div class="fuwari-card p-5 mt-4">
+  <div class="flex items-center justify-between mb-3.5">
+    <div class="flex items-center gap-2">
+      <span class="w-1.5 h-4 rounded-full bg-accent"></span>
+      <h4 class="font-bold text-sm text-foreground">时间归档</h4>
+    </div>
+    <a href="/archives" class="text-xs text-muted-foreground hover:text-accent transition-colors">
+      时间轴 →
+    </a>
+  </div>
+
+  <div class="space-y-1">
+    {years.slice(0, 6).map(item => (
+      <a
+        href={`/archives#year-${item.year}`}
+        class="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-foreground/80 hover:bg-accent/10 hover:text-accent transition-colors group"
+      >
+        <span class="font-mono group-hover:translate-x-0.5 transition-transform">{item.year} 年</span>
+        <span class="px-2 py-0.5 rounded-full bg-muted/60 text-[10px] text-muted-foreground group-hover:bg-accent/20 group-hover:text-accent font-mono">
+          {item.count} 篇
+        </span>
+      </a>
+    ))}
+  </div>
+</div>

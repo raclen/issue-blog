@@ -1,50 +1,347 @@
 ---
-import { render } from "astro:content";
-import BaseLayout from "@/layouts/BaseLayout.astro";
-import { formatDate, getPosts } from "@/lib/posts";
+import { type CollectionEntry, render } from "astro:content";
+import AstroPaperLayout from "@/layouts/AstroPaperLayout.astro";
+import Header from "@/components/Header.astro";
+import Footer from "@/components/Footer.astro";
+import FuwariProfile from "@/components/fuwari/FuwariProfile.astro";
+import FuwariToc from "@/components/fuwari/FuwariToc.astro";
+import FuwariArchiveWidget from "@/components/fuwari/FuwariArchiveWidget.astro";
+import FuwariTagsWidget from "@/components/fuwari/FuwariTagsWidget.astro";
+import { getPosts, formatDate } from "@/lib/posts";
+import { getReadingTime } from "@/utils/readingTime";
+import { slugifyStr } from "@/utils/slugify";
+import { toTransitionName } from "@/utils/toTransitionName";
+import { getTagUrl } from "@/utils/tagUrl";
+import BackToTopButton from "./_components/BackToTopButton.astro";
+import AdjacentPostNav from "./_components/AdjacentPostNav.astro";
+import GiscusComments from "./_components/GiscusComments.astro";
+import config from "@/config";
 
 export async function getStaticPaths() {
   const posts = await getPosts();
 
-  return posts.map(post => ({
+  return posts.map((post, index) => ({
     params: { slug: post.id.replace(/\.(md|mdx)$/i, "") },
-    props: { post },
+    props: {
+      post,
+      allPosts: posts,
+      prevPost:
+        index > 0
+          ? {
+              id: posts[index - 1].id,
+              title: posts[index - 1].data.title,
+            }
+          : null,
+      nextPost:
+        index < posts.length - 1
+          ? {
+              id: posts[index + 1].id,
+              title: posts[index + 1].data.title,
+            }
+          : null,
+    },
   }));
 }
 
-const { post } = Astro.props;
-const { Content } = await render(post);
+type AdjacentPost = {
+  id: string;
+  title: string;
+} | null;
+
+type Props = {
+  post: CollectionEntry<"blog">;
+  allPosts: CollectionEntry<"blog">[];
+  prevPost: AdjacentPost;
+  nextPost: AdjacentPost;
+};
+
+const { post, allPosts = [], prevPost, nextPost } = Astro.props;
+
+const {
+  title,
+  description,
+  pubDate,
+  updatedDate,
+  issueNumber,
+  issueUrl,
+  tags = [],
+} = post.data;
+
+const { Content, headings: rawHeadings } = await render(post);
+const reading = getReadingTime(post.body || "");
+
+// 强化 headings 提取：兼容标准 Markdown 标题以及嵌入 HTML 标签的标题
+let headings = [...rawHeadings];
+if (headings.length === 0 && post.body) {
+  const htmlHeadingRegex = /<h([1-6])([^>]*)>(.*?)<\/h\1>/gi;
+  let match;
+  while ((match = htmlHeadingRegex.exec(post.body)) !== null) {
+    const depth = parseInt(match[1], 10);
+    const attrs = match[2];
+    const text = match[3].replace(/<[^>]+>/g, "").trim();
+    if (!text) continue;
+    const idMatch = attrs.match(/id=["']?([^"'>\s]+)["']?/i);
+    const slug = idMatch ? idMatch[1] : slugifyStr(text);
+    headings.push({ depth, slug, text });
+  }
+}
+
+// 提取全站标签统计
+const tagCounts = new Map<string, number>();
+const yearsMap = new Map<string, number>();
+
+allPosts.forEach(p => {
+  p.data.tags.forEach(t => {
+    tagCounts.set(t, (tagCounts.get(t) ?? 0) + 1);
+  });
+
+  const year = p.data.pubDate.getFullYear().toString();
+  yearsMap.set(year, (yearsMap.get(year) ?? 0) + 1);
+});
+
+const tagsWithCount = Array.from(tagCounts, ([tag, count]) => ({
+  tag,
+  count,
+})).sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag, "zh-CN"));
+
+const yearsList = Array.from(yearsMap, ([year, count]) => ({
+  year,
+  count,
+})).sort((a, b) => Number(b.year) - Number(a.year));
+
+// 过滤用于目录展示的标题
+const minDepth = Math.min(...headings.map(h => h.depth), 2);
+const filteredHeadings = headings.filter(h => {
+  if (minDepth === 1) {
+    return h.depth >= 1 && h.depth <= 3;
+  }
+  return h.depth >= 2 && h.depth <= 4;
+});
+const hasHeadings = filteredHeadings.length > 0;
 ---
 
-<BaseLayout title={post.data.title} description={post.data.description}>
-  <main class="article">
-    <article>
-      <h1>{post.data.title}</h1>
-      <div class="meta">
-        <time datetime={post.data.pubDate.toISOString()}>
-          {formatDate(post.data.pubDate)}
-        </time>
-        {
-          post.data.updatedDate && (
-            <span>Updated {formatDate(post.data.updatedDate)}</span>
-          )
-        }
-        {
-          post.data.issueUrl && (
-            <a href={post.data.issueUrl} rel="noreferrer">Discuss on GitHub</a>
-          )
-        }
-      </div>
-      {
-        post.data.tags.length > 0 && (
-          <div class="tags">
-            {post.data.tags.map(tag => (
-              <span class="tag">{tag}</span>
-            ))}
+<AstroPaperLayout
+  title={`${title} | ${config.site.title}`}
+  description={description}
+>
+  <Header />
+
+  <!-- 顶部阅读进度条 -->
+  <div id="fuwari-progress" class="fixed top-0 left-0 h-1 bg-accent z-50 transition-all duration-150" style="width: 0%"></div>
+
+  <!-- 详情页主容器 -->
+  <div class="relative max-w-[75rem] mx-auto px-4 sm:px-6 w-full pt-4 pb-16">
+    <div class="grid grid-cols-1 lg:grid-cols-[17.5rem_1fr] gap-4 items-start">
+      <!-- 左侧边栏：Profile 卡片 + 标签/归档挂件 -->
+      <aside class="space-y-4 lg:sticky lg:top-4 order-2 lg:order-1 w-full">
+        <FuwariProfile
+          postsCount={allPosts.length}
+          categoriesCount={yearsList.length}
+          tagsCount={tagsWithCount.length}
+        />
+        <FuwariArchiveWidget years={yearsList} />
+        <FuwariTagsWidget tags={tagsWithCount} />
+      </aside>
+
+      <!-- 中间主内容区：纯净文章正文 Bento 卡片 -->
+      <main class="order-1 lg:order-2 space-y-4 min-w-0" data-pagefind-body>
+        <article class="fuwari-card p-5 sm:p-8 border border-border/80 relative">
+          <!-- 返回按钮与字数/用时元数据 -->
+          <div class="flex items-center justify-between pb-4 mb-6 border-b border-border/60">
+            <a
+              href="/"
+              class="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-accent transition-colors"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              返回文章列表
+            </a>
+
+            <div class="flex items-center gap-3 text-xs text-muted-foreground">
+              <span class="flex items-center gap-1">
+                <svg class="w-3.5 h-3.5 opacity-70" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+                {reading.words} 字
+              </span>
+              <span>·</span>
+              <span class="flex items-center gap-1">
+                <svg class="w-3.5 h-3.5 opacity-70" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {reading.minutes} 分钟
+              </span>
+            </div>
           </div>
-        )
+
+          <!-- 文章大标题（带 Fuwari 左侧装饰点缀） -->
+          <div class="relative pl-3 border-l-4 border-accent mb-4">
+            <h1
+              style={{ viewTransitionName: toTransitionName(title) }}
+              class="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground leading-snug"
+              data-pagefind-meta="title"
+              data-pagefind-weight="10"
+            >
+              {title}
+            </h1>
+          </div>
+
+          <!-- 时间与 Issue 编号 -->
+          <div class="flex flex-wrap items-center gap-3 text-xs text-muted-foreground mb-7">
+            <time datetime={pubDate.toISOString()}>
+              {formatDate(pubDate)}
+            </time>
+            {updatedDate && (
+              <>
+                <span>·</span>
+                <span>更新于 {formatDate(updatedDate)}</span>
+              </>
+            )}
+            {issueNumber && (
+              <>
+                <span>·</span>
+                <span class="inline-flex items-center gap-1 font-mono text-accent">
+                  <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                  </svg>
+                  Issue #{issueNumber}
+                </span>
+              </>
+            )}
+            {issueUrl && (
+              <>
+                <span>·</span>
+                <a
+                  href={issueUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-accent hover:underline flex items-center gap-1"
+                >
+                  <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+                  </svg>
+                  Discuss on GitHub
+                </a>
+              </>
+            )}
+          </div>
+
+          <!-- 正文区：Markdown 渲染内容 -->
+          <div
+            id="article"
+            class:list={[
+              "app-prose max-w-none",
+              "prose-pre:bg-(--shiki-light-bg) dark:prose-pre:bg-(--shiki-dark-bg)",
+              "prose-headings:scroll-mt-24",
+            ]}
+          >
+            <Content />
+          </div>
+
+          <!-- 文章底部标签 -->
+          {tags.length > 0 && (
+            <div class="mt-10 pt-6 border-t border-border/60 flex flex-wrap items-center gap-2">
+              <span class="text-xs text-muted-foreground font-semibold mr-1">标签:</span>
+              {tags.map(tag => (
+                <a
+                  href={getTagUrl(tag)}
+                  class="fuwari-pill text-xs py-0.5 px-2.5 hover:bg-accent hover:text-white transition-colors"
+                >
+                  #{tag}
+                </a>
+              ))}
+            </div>
+          )}
+
+          <!-- 上一篇与下一篇导航 -->
+          <AdjacentPostNav {prevPost} {nextPost} />
+        </article>
+
+        <!-- 评论与 GitHub Issue 讨论区 Bento 卡片 -->
+        <div class="fuwari-card p-4 sm:p-6 border border-border/80">
+          <GiscusComments {issueUrl} {issueNumber} />
+        </div>
+      </main>
+    </div>
+
+    <!-- 右侧目录 (TOC)：绝对定位撑满主容器高度，内部 sticky 随滚动吸顶 -->
+    {hasHeadings && (
+      <aside class="hidden xl:block absolute left-[calc(100%+1rem)] top-0 h-full w-[14rem] 2xl:w-[16rem] pointer-events-none">
+        <div class="sticky top-4 pointer-events-auto">
+          <FuwariToc headings={headings} />
+        </div>
+      </aside>
+    )}
+  </div>
+
+  <BackToTopButton />
+  <Footer />
+</AstroPaperLayout>
+
+<script is:inline data-astro-rerun>
+  // 滚动进度条
+  function initProgressBar() {
+    const bar = document.getElementById("fuwari-progress");
+    if (!bar) return;
+    window.addEventListener("scroll", () => {
+      const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+      const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      const scrolled = height > 0 ? (winScroll / height) * 100 : 0;
+      bar.style.width = scrolled + "%";
+    });
+  }
+  initProgressBar();
+
+  // 代码块复制按钮
+  function attachCopyButtons() {
+    const copyButtonLabel = "复制";
+    const codeBlocks = Array.from(document.querySelectorAll("pre"));
+
+    for (const codeBlock of codeBlocks) {
+      if (codeBlock.querySelector(".copy-code")) continue;
+      const wrapper = document.createElement("div");
+      wrapper.style.position = "relative";
+
+      const copyButton = document.createElement("button");
+      copyButton.className =
+        "copy-code absolute end-3 top-3 rounded-lg bg-muted/80 backdrop-blur-sm border border-border/60 px-2.5 py-1 text-xs text-foreground font-medium hover:bg-accent hover:text-white transition-colors";
+      copyButton.innerHTML = copyButtonLabel;
+      codeBlock.setAttribute("tabindex", "0");
+      codeBlock.appendChild(copyButton);
+
+      codeBlock?.parentNode?.insertBefore(wrapper, codeBlock);
+      wrapper.appendChild(codeBlock);
+
+      copyButton.addEventListener("click", async () => {
+        const code = codeBlock.querySelector("code");
+        await navigator.clipboard.writeText(code?.innerText ?? "");
+        copyButton.innerText = "已复制 ✓";
+        setTimeout(() => {
+          copyButton.innerText = copyButtonLabel;
+        }, 1200);
+      });
+    }
+  }
+  attachCopyButtons();
+
+  // 为文章内标题动态注入锚点 id
+  function ensureHeadingIds() {
+    const article = document.getElementById("article");
+    if (!article) return;
+    const headings = article.querySelectorAll("h1, h2, h3, h4, h5, h6");
+    headings.forEach((h) => {
+      if (!h.id) {
+        const text = h.textContent?.trim() || "";
+        if (text) {
+          h.id = encodeURIComponent(text.toLowerCase().replace(/\s+/g, "-"));
+        }
       }
-      <Content />
-    </article>
-  </main>
-</BaseLayout>
+    });
+  }
+  ensureHeadingIds();
+
+  document.addEventListener("astro:after-swap", () =>
+    window.scrollTo({ left: 0, top: 0, behavior: "instant" })
+  );
+</script>

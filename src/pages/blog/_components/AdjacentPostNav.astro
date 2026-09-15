@@ -1,0 +1,53 @@
+---
+import IconArrowLeft from "@/assets/icons/IconArrowLeft.svg";
+import IconArrowRight from "@/assets/icons/IconArrowRight.svg";
+
+type AdjacentPost = {
+  id: string;
+  title: string;
+} | null;
+
+type Props = {
+  prevPost: AdjacentPost;
+  nextPost: AdjacentPost;
+};
+
+const { prevPost, nextPost } = Astro.props;
+
+const getUrl = (id: string) => `/blog/${id.replace(/\.(md|mdx)$/i, "")}/`;
+---
+
+<div data-pagefind-ignore class="my-6 grid grid-cols-1 gap-4 sm:grid-cols-2 pt-6 border-t border-border/60">
+  {
+    prevPost ? (
+      <a
+        href={getUrl(prevPost.id)}
+        class="group flex items-start gap-2.5 p-3 rounded-xl hover:bg-accent/10 transition-colors"
+      >
+        <IconArrowLeft class="size-4 mt-0.5 text-muted-foreground group-hover:text-accent transition-colors flex-none rtl:rotate-180" />
+        <div class="min-w-0">
+          <span class="text-xs text-muted-foreground block">上一篇</span>
+          <div class="text-xs sm:text-sm font-semibold text-foreground group-hover:text-accent truncate transition-colors">{prevPost.title}</div>
+        </div>
+      </a>
+    ) : (
+      <div />
+    )
+  }
+  {
+    nextPost ? (
+      <a
+        href={getUrl(nextPost.id)}
+        class="group flex items-start justify-end text-end gap-2.5 p-3 rounded-xl hover:bg-accent/10 transition-colors sm:col-start-2"
+      >
+        <div class="min-w-0">
+          <span class="text-xs text-muted-foreground block">下一篇</span>
+          <div class="text-xs sm:text-sm font-semibold text-foreground group-hover:text-accent truncate transition-colors">{nextPost.title}</div>
+        </div>
+        <IconArrowRight class="size-4 mt-0.5 text-muted-foreground group-hover:text-accent transition-colors flex-none rtl:rotate-180" />
+      </a>
+    ) : (
+      <div />
+    )
+  }
+</div>

@@ -1,0 +1,71 @@
+@import "tailwindcss";
+@import "./astropaper-theme.css";
+@import "./astropaper-typography.css";
+@import "./fuwari.css";
+@import "rehype-callouts/theme/obsidian";
+
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+@layer base {
+  * {
+    @apply border-border outline-accent/75;
+    scrollbar-width: auto;
+    scrollbar-color: var(--color-muted) transparent;
+  }
+  a,
+  button {
+    @apply outline-accent outline-offset-1 focus-visible:no-underline focus-visible:outline-2 focus-visible:outline-dashed;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+/* ============================================================
+   阅读区宽度（中文技术长文）
+   --app-content-width  正文列宽，不含左右留白
+   --app-gutter         左右留白
+   页头 / 页脚 / 正文共用同一组变量，保证竖向对齐。
+   ============================================================ */
+:root {
+  --app-content-width: 56rem; /* 896px */
+  --app-gutter: 1rem; /* 16px：移动端 */
+}
+
+@media (min-width: 640px) {
+  :root {
+    --app-gutter: 1.5rem; /* 24px：平板及以上 */
+  }
+}
+
+@media (min-width: 1280px) {
+  :root {
+    --app-content-width: 61rem; /* 976px：大屏加宽 */
+  }
+}
+
+@utility max-w-app {
+  max-width: var(--app-content-width);
+}
+
+@utility app-layout {
+  @apply mx-auto w-full;
+  max-width: calc(var(--app-content-width) + 2 * var(--app-gutter));
+  padding-inline: var(--app-gutter);
+}
+
+@utility chrome-layout {
+  @apply mx-auto w-full;
+  max-width: calc(var(--app-content-width) + 2 * var(--app-gutter));
+  padding-inline: var(--app-gutter);
+}
+
+@utility active-nav {
+  @apply underline decoration-1 underline-offset-4;
+}
+
+:target {
+  scroll-margin-block: 1rem;
+}
+

@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <title>当下的七炎</title>
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="qiyan-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#141722"/>
+      <stop offset="50%" stop-color="#0F121A"/>
+      <stop offset="100%" stop-color="#08090D"/>
+    </linearGradient>
+
+    <!-- Radial Flame Glow -->
+    <radialGradient id="qiyan-glow" cx="50%" cy="56%" r="55%">
+      <stop offset="0%" stop-color="#FF5A00" stop-opacity="0.45"/>
+      <stop offset="45%" stop-color="#FF1E00" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Border Rim -->
+    <linearGradient id="qiyan-rim" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.25"/>
+      <stop offset="40%" stop-color="#FF7A00" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.08"/>
+    </linearGradient>
+
+    <!-- Main "7" Flame Gradient -->
+    <linearGradient id="qiyan-flame7" x1="10%" y1="0%" x2="90%" y2="100%">
+      <stop offset="0%" stop-color="#FFC800"/>
+      <stop offset="22%" stop-color="#FF7A00"/>
+      <stop offset="60%" stop-color="#FF1A26"/>
+      <stop offset="100%" stop-color="#B20025"/>
+    </linearGradient>
+
+    <!-- Secondary Flame Tongue Gradient (炎之初火) -->
+    <linearGradient id="qiyan-flame-sub" x1="10%" y1="0%" x2="80%" y2="100%">
+      <stop offset="0%" stop-color="#FFE033"/>
+      <stop offset="35%" stop-color="#FF8E00"/>
+      <stop offset="85%" stop-color="#FF2400"/>
+      <stop offset="100%" stop-color="#C40018"/>
+    </linearGradient>
+
+    <!-- Core Ember Gradient (当下之核) -->
+    <linearGradient id="qiyan-core" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="30%" stop-color="#FFF566"/>
+      <stop offset="70%" stop-color="#FF9900"/>
+      <stop offset="100%" stop-color="#FF3E00"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Squircle Base -->
+  <rect x="20" y="20" width="472" height="472" rx="116" fill="url(#qiyan-bg)"/>
+  <rect x="20" y="20" width="472" height="472" rx="116" fill="url(#qiyan-glow)"/>
+  <rect x="20" y="20" width="472" height="472" rx="116" fill="none" stroke="url(#qiyan-rim)" stroke-width="2.5"/>
+
+  <!-- Scaled & Centered Flame 7 Glyph -->
+  <g id="qiyan-emblem" transform="translate(256, 252) scale(1.18) translate(-256, -256)">
+    <!-- Lower Flame Tongue (炎 - 前火) -->
+    <path d="M 230 430
+             C 165 420, 118 368, 118 300
+             C 118 238, 154 188, 198 152
+             C 204 146, 214 152, 210 160
+             C 184 204, 180 252, 204 290
+             C 216 312, 234 330, 244 358
+             C 250 376, 246 414, 230 430 Z"
+          fill="url(#qiyan-flame-sub)"/>
+
+    <!-- Dominant Upper 7 Flame (炎 - 主火兼构「7」字) -->
+    <path d="M 148 138
+             C 204 122, 280 114, 372 120
+             C 396 122, 410 138, 404 160
+             C 396 182, 376 210, 350 244
+             C 304 302, 260 376, 240 436
+             C 236 448, 218 444, 220 430
+             C 236 348, 280 264, 324 206
+             C 334 192, 328 184, 310 184
+             C 248 184, 190 196, 142 226
+             C 128 234, 120 220, 126 208
+             C 134 190, 140 162, 148 138 Z"
+          fill="url(#qiyan-flame7)"/>
+
+    <!-- Luminous Center Ember (当下之焦点) -->
+    <path d="M 234 336
+             C 214 308, 212 262, 238 230
+             C 242 224, 250 228, 250 234
+             C 246 268, 260 300, 276 326
+             C 280 334, 272 346, 258 344
+             C 248 344, 238 340, 234 336 Z"
+          fill="url(#qiyan-core)"/>
+
+    <!-- Dynamic Spark Crest (飞跃星火) -->
+    <path d="M 406 96
+             C 410 86, 420 82, 420 82
+             C 420 82, 418 92, 414 102
+             C 410 112, 400 116, 400 116
+             C 400 116, 402 106, 406 96 Z"
+          fill="#FFE066"/>
+  </g>
+</svg>
