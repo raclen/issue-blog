@@ -25,18 +25,19 @@ Issue Blog keeps the entire publishing flow inside GitHub and static hosting.
 - Short publishing path: add the `blog` label and the post is ready for sync.
 - Low operating cost: Astro builds a static site and Cloudflare hosts it.
 - Good for individuals and small teams: personal blogs, changelogs, dev logs, and internal knowledge bases all fit well.
-- Not platform-bound: the site is a normal Astro project, so you can swap themes, add search, or extend comments later.
+- Not platform-bound: the site is a normal Astro project with a theme, search, and discussion links already built in, so you can extend it freely.
 
 ## Highlights
 
-- Syncs GitHub Issues into blog posts
-- Uses the `blog` label to filter publishable content
-- Converts other issue labels into post tags
-- Supports fixed `pubDate` and `updatedDate`
-- Generates post pages and RSS automatically
-- Uses GitHub Actions for scheduled and event-driven sync
-- Includes a Cloudflare one-click deploy button
-- Supports local development, builds, and Wrangler deployment
+- Syncs GitHub Issues into blog posts: `blog` selects publishable content and other labels become post tags
+- Fuwari-style cards with configurable author profiles, tag counts, year archives, and a table of contents
+- Pagefind full-text search, light/dark themes, reading progress, word counts, reading time, code copying, and adjacent-post navigation
+- Supports fixed `pubDate` and `updatedDate`, with automatic post pages, RSS, and sitemap generation
+- A compact amber notice appears after a post is more than **100 full days** old; the browser recalculates its age when the page opens
+- Daily sharing: monthly Markdown files with day navigation, stable date anchors, and adjacent-month links
+- Links readers to the original GitHub Issue by default, with optional Giscus comments and no dependency on the template author's private comment service
+- GitHub Actions sync with Cloudflare one-click deployment
+- Local development, builds, and Wrangler deployment
 
 ## Deploy
 
@@ -112,7 +113,27 @@ Cloudflare static site
 3. GitHub Actions syncs on create, edit, label change, reopen, close, and delete events, and also runs on a daily schedule.
 4. The sync job commits the generated Markdown to `src/content/blog/`.
 
-Other issue labels become post tags. The `blog` label is only used as the publishing filter.
+Other issue labels become post tags. The `blog` label is only used as the publishing filter. Removing it or closing an issue removes the corresponding post on the next sync, since only open issues are fetched by default.
+
+Sync commits do not include `[skip ci]`, so hosting platforms can build the updated content. The sync workflow only listens to issue events, schedules, and manual dispatches; its own commits do not recursively trigger it.
+
+## Pages and Theme Configuration
+
+| Route | Content |
+| --- | --- |
+| `/` | Blog homepage, post list, and search entry |
+| `/blog/[slug]` | Post details, table of contents, age notice, adjacent posts, and Issue discussions |
+| `/tags`, `/tags/[tag]` | Tag list and paginated posts by tag |
+| `/archives` | Year archives |
+| `/daily`, `/daily/[month]` | Daily-sharing month list and monthly pages |
+| `/rss.xml` | Blog RSS feed |
+| `/sitemap-index.xml` | Sitemap |
+
+Edit [astro-paper.config.ts](astro-paper.config.ts) to set your own `site.title`, `site.description`, `site.author`, `site.authorBio`, `site.authorAvatar`, and `site.profile`. Configure social links through `socials`, Pagefind search through `features.search`, and theme switching through `features.lightAndDarkMode`.
+
+`comments.enabled` defaults to `false`, but posts still link to the original Issue for discussion. For embedded comments, get your repository's settings from [giscus.app](https://giscus.app), set `comments.enabled` to `true` and `provider` to `"giscus"`, and fill in `repo`, `repoId`, `category`, and `categoryId`. Optional fields are documented in [src/types/config.ts](src/types/config.ts).
+
+Daily sharing is edited manually in `src/content/daily/YYYY-MM.md`, independently of Issue-synced blog posts. Each file represents one month and is left untouched by the sync script. See [src/content/daily/2026-11.md](src/content/daily/2026-11.md) for day headings, link entries, and indented continuation lines, and [src/utils/parseDaily.ts](src/utils/parseDaily.ts) for the parser. Rebuild after adding a new month to generate its page.
 
 ## Good Fits
 
@@ -129,14 +150,40 @@ If this project helps you, please star the repo. Your support helps me keep impr
 
 ## Local Development
 
-```bash
-npm install          # install dependencies
-npm run dev          # local dev server (http://localhost:4321)
-npm run build        # build to dist/
-npm run deploy       # build and deploy to Cloudflare
+Use Node.js 22 and install the locked dependencies:
 
-# sync issues from a specific repository
-ISSUE_REPO=OWNER/REPO GITHUB_TOKEN=YOUR_TOKEN npm run sync:issues
+```bash
+npm ci
+```
+
+Start the local dev server (`http://localhost:4321`):
+
+```bash
+npm run dev
+```
+
+Run type checks, build to `dist/`, and generate the Pagefind index:
+
+```bash
+npm run build
+```
+
+Preview the production output:
+
+```bash
+npm run preview
+```
+
+Build and deploy to your Cloudflare account:
+
+```bash
+npm run deploy
+```
+
+Sync issues from a specific repository (configure the Token in your local environment; never commit it):
+
+```bash
+ISSUE_REPO=OWNER/REPO npm run sync:issues
 ```
 
 ## Issue Metadata
@@ -160,7 +207,7 @@ Supported environment variables:
 - `ISSUE_LABEL`: label used to select blog posts, default `blog`.
 - `ISSUE_STATE`: issue state to fetch, default `open`.
 - `GITHUB_TOKEN`: GitHub API token, useful for private repositories or higher rate limits.
-- `SITE_URL`: site URL used during Astro builds and RSS generation.
+- `SITE_URL`: site URL used for canonical URLs and absolute RSS and sitemap links.
 
 ## Project Layout
 
@@ -171,10 +218,15 @@ issue-blog/
 │   └── workflows/sync-issues.yml
 ├── scripts/sync-issues.js
 ├── src/
-│   ├── content/blog/
+│   ├── components/fuwari/
+│   ├── content/
+│   │   ├── blog/
+│   │   └── daily/
+│   ├── content.config.ts
 │   ├── layouts/
-│   ├── lib/
-│   └── pages/
+│   ├── lib/posts.ts
+│   ├── pages/
+│   └── utils/parseDaily.ts
 ├── .npmrc
 ├── .node-version
 ├── astro.config.mjs

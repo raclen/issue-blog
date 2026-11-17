@@ -1,0 +1,68 @@
+---
+interface Props {
+  pubDatetime: string | Date;
+  class?: string;
+}
+
+const { pubDatetime, class: className = "" } = Astro.props;
+
+const pubDate = new Date(pubDatetime);
+const isValidDate = !isNaN(pubDate.getTime());
+const now = new Date();
+const diffMs = isValidDate ? now.getTime() - pubDate.getTime() : 0;
+const time = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+const isOutdated = isValidDate && time > 100;
+---
+
+<div
+  data-pub-date={isValidDate ? pubDate.toISOString() : ""}
+  class:list={[
+    "outdated-notice mt-6 mb-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3.5 py-2 sm:px-4 sm:py-2.5 text-amber-900 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-200",
+    { hidden: !isOutdated },
+    className,
+  ]}
+  role="alert"
+>
+  <div class="flex items-center gap-2 sm:gap-2.5">
+    <svg
+      class="size-4 shrink-0 text-amber-500 dark:text-amber-400"
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path>
+      <line x1="12" y1="9" x2="12" y2="13"></line>
+      <line x1="12" y1="17" x2="12.01" y2="17"></line>
+    </svg>
+    <p class="text-xs sm:text-sm leading-normal">
+      提醒：本文发表于<span class="outdated-notice-days font-medium">{time}</span>天前，文中所描述的信息可能已发生改变，请谨慎使用。
+    </p>
+  </div>
+</div>
+
+<script is:inline data-astro-rerun>
+  (function () {
+    const notices = document.querySelectorAll(".outdated-notice");
+    notices.forEach((notice) => {
+      const pubDateStr = notice.getAttribute("data-pub-date");
+      if (!pubDateStr) return;
+      const pubDate = new Date(pubDateStr);
+      if (isNaN(pubDate.getTime())) return;
+      const now = new Date();
+      const diffMs = now.getTime() - pubDate.getTime();
+      const time = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      const daysEl = notice.querySelector(".outdated-notice-days");
+      if (time > 100) {
+        if (daysEl) daysEl.textContent = String(time);
+        notice.classList.remove("hidden");
+      } else {
+        notice.classList.add("hidden");
+      }
+    });
+  })();
+</script>

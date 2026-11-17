@@ -16,4 +16,14 @@ const blog = defineCollection({
   }),
 });
 
-export const collections = { blog };
+// 每日分享：一个月一个文件，扁平目录避免文件 id 变成带斜杠的路由。
+const daily = defineCollection({
+  loader: glob({ pattern: "*.md", base: "./src/content/daily" }),
+  schema: z.object({
+    title: z.string().optional(),
+    description: z.string().optional(),
+    draft: z.boolean().default(false),
+  }),
+});
+
+export const collections = { blog, daily };

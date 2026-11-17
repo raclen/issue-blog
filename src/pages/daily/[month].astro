@@ -1,0 +1,158 @@
+---
+import { getCollection } from "astro:content";
+import FuwariBlogLayout from "@/layouts/FuwariBlogLayout.astro";
+import { getPosts, getTagsWithCount } from "@/lib/posts";
+import {
+  parseDailyMonth,
+  renderInline,
+  type DailyMonth,
+} from "@/utils/parseDaily";
+import config from "@/config";
+
+export async function getStaticPaths() {
+  const months = (await getCollection("daily"))
+    .filter(entry => !entry.data.draft)
+    .map(entry => parseDailyMonth(entry.id, entry.body ?? "", entry.data.title))
+    .sort((a, b) => (a.month < b.month ? 1 : -1));
+
+  return months.map((month, index) => ({
+    params: { month: month.month },
+    props: {
+      month,
+      newerMonth: months[index - 1] ?? null,
+      olderMonth: months[index + 1] ?? null,
+    },
+  }));
+}
+
+type Props = {
+  month: DailyMonth;
+  newerMonth: DailyMonth | null;
+  olderMonth: DailyMonth | null;
+};
+
+const { month, newerMonth, olderMonth } = Astro.props;
+
+// 侧栏统计沿用博客口径，避免显示成 0
+const sortedPosts = await getPosts();
+const tags = getTagsWithCount(sortedPosts);
+const yearsMap = new Map<string, number>();
+sortedPosts.forEach(post => {
+  const year = String(post.data.pubDate.getFullYear());
+  yearsMap.set(year, (yearsMap.get(year) || 0) + 1);
+});
+const years = Array.from(yearsMap, ([year, count]) => ({ year, count })).sort(
+  (a, b) => Number(b.year) - Number(a.year)
+);
+
+const description = `共 ${month.days.length} 天、${month.entryCount} 条链接分享。`;
+---
+
+<FuwariBlogLayout
+  title={`${month.label} · 每日分享 | ${config.site.title}`}
+  description={description}
+  postsCount={sortedPosts.length}
+  years={years}
+  tags={tags}
+  showBanner={false}
+>
+  <!-- 月份头部 + 日目录 -->
+  <div class="fuwari-card p-5 sm:p-8 border border-border/80 mb-4">
+    <div class="flex items-center justify-between pb-4 border-b border-border/60">
+      <div class="flex items-center gap-2 font-bold text-base sm:text-lg text-foreground">
+        <span class="w-1.5 h-4 rounded-full bg-accent"></span>
+        <span>{month.label}</span>
+      </div>
+      <span class="text-xs text-muted-foreground font-mono">
+        {month.days.length} 天 · {month.entryCount} 条
+      </span>
+    </div>
+
+    <nav class="flex flex-wrap gap-2 mt-4" aria-label="日目录">
+      {
+        month.days.map(day => (
+          <a
+            href={`#${day.anchorId}`}
+            class="fuwari-pill text-xs hover:border-accent/40 hover:text-accent transition-colors"
+            title={`${day.dayLabel} ${day.weekday}`}
+          >
+            {day.dayLabel}
+            <span class="ml-1 text-[10px] opacity-60">{day.entries.length}</span>
+          </a>
+        ))
+      }
+    </nav>
+  </div>
+
+  <!-- 按日分节 -->
+  <div class="space-y-4">
+    {
+      month.days.map(day => (
+        <section
+          id={day.anchorId}
+          class="fuwari-card p-5 border border-border/70 scroll-mt-4"
+        >
+          <div class="flex items-baseline justify-between mb-3 pb-2 border-b border-border/50">
+            <h2 class="font-bold text-base text-foreground flex items-center gap-2">
+              <span class="w-1.5 h-4 rounded-full bg-accent" />
+              {day.dayLabel}
+            </h2>
+            <span class="text-[11px] text-muted-foreground font-mono">
+              {day.weekday} · {day.entries.length} 条
+            </span>
+          </div>
+
+          <ul class="space-y-2.5">
+            {day.entries.map(entry => (
+              <li class="flex gap-2.5 text-sm leading-relaxed">
+                <span class="mt-2 w-1 h-1 rounded-full bg-border shrink-0" />
+                <div class="min-w-0">
+                  <a
+                    href={entry.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="font-semibold text-foreground hover:text-accent transition-colors break-words"
+                  >
+                    {entry.name}
+                  </a>
+                  {entry.desc && (
+                    <span class="text-muted-foreground">
+                      {" — "}
+                      <span set:html={renderInline(entry.desc)} />
+                    </span>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))
+    }
+  </div>
+
+  <!-- 相邻月份 -->
+  <div class="flex items-center justify-between gap-3 mt-6">
+    {
+      olderMonth ? (
+        <a
+          href={`/daily/${olderMonth.month}/`}
+          class="text-xs text-muted-foreground hover:text-accent transition-colors"
+        >
+          ← {olderMonth.label}
+        </a>
+      ) : (
+        <span />
+      )
+    }
+    {
+      newerMonth && (
+        <a
+          href={`/daily/${newerMonth.month}/`}
+          class="text-xs text-muted-foreground hover:text-accent transition-colors"
+        >
+          {newerMonth.label} →
+        </a>
+      )
+    }
+  </div>
+</FuwariBlogLayout>

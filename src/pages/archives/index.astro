@@ -1,21 +1,12 @@
 ---
 import FuwariBlogLayout from "@/layouts/FuwariBlogLayout.astro";
-import { getPosts } from "@/lib/posts";
+import { getPosts, getTagsWithCount } from "@/lib/posts";
 import config from "@/config";
 
 const posts = await getPosts();
 
 // 提取标签统计
-const tagCounts = new Map<string, number>();
-posts.forEach(post => {
-  post.data.tags.forEach(tag => {
-    tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
-  });
-});
-const tagsWithCount = Array.from(tagCounts, ([tag, count]) => ({
-  tag,
-  count,
-})).sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag, "zh-CN"));
+const tagsWithCount = getTagsWithCount(posts);
 
 // 按年份分组文章
 const postsByYear = new Map<string, typeof posts>();

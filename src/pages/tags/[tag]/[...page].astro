@@ -3,7 +3,7 @@ import type { GetStaticPathsOptions } from "astro";
 import FuwariBlogLayout from "@/layouts/FuwariBlogLayout.astro";
 import FuwariBentoCard from "@/components/fuwari/FuwariBentoCard.astro";
 import Pagination from "@/components/Pagination.astro";
-import { getPosts } from "@/lib/posts";
+import { getPosts, getTagsWithCount } from "@/lib/posts";
 import { getTagSlug } from "@/utils/tagUrl";
 import config from "@/config";
 
@@ -38,22 +38,13 @@ const { page, tagName } = Astro.props;
 const allPosts = await getPosts();
 
 // 提取全站标签统计
-const tagCounts = new Map<string, number>();
+const tagsWithCount = getTagsWithCount(allPosts);
 const yearsMap = new Map<string, number>();
 
 allPosts.forEach(post => {
-  post.data.tags.forEach(tag => {
-    tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
-  });
-
   const year = post.data.pubDate.getFullYear().toString();
   yearsMap.set(year, (yearsMap.get(year) ?? 0) + 1);
 });
-
-const tagsWithCount = Array.from(tagCounts, ([tag, count]) => ({
-  tag,
-  count,
-})).sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag, "zh-CN"));
 
 const yearsList = Array.from(yearsMap, ([year, count]) => ({
   year,

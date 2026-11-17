@@ -16,6 +16,7 @@ const isActive = (path: string) => {
   if (path === "/" && (currentPath === "/" || currentPath === "")) return true;
   if (path === "/archives" && currentPath.startsWith("/archives")) return true;
   if (path === "/tags" && currentPath.startsWith("/tags")) return true;
+  if (path === "/daily" && currentPath.startsWith("/daily")) return true;
   return false;
 };
 ---
@@ -73,6 +74,17 @@ const isActive = (path: string) => {
           ]}
         >
           标签
+        </a>
+        <a
+          href={getRelativeLocaleUrl(locale, "daily")}
+          class:list={[
+            "px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition-all",
+            isActive("/daily")
+              ? "bg-accent text-accent-foreground shadow-sm"
+              : "text-foreground/75 hover:text-foreground hover:bg-muted/80"
+          ]}
+        >
+          每日分享
         </a>
       </nav>
 
@@ -173,6 +185,17 @@ const isActive = (path: string) => {
           ]}
         >
           标签
+        </a>
+        <a
+          href={getRelativeLocaleUrl(locale, "daily")}
+          class:list={[
+            "px-3 py-2 rounded-lg transition-all",
+            isActive("/daily")
+              ? "bg-accent text-accent-foreground font-semibold"
+              : "text-foreground/80 hover:text-foreground hover:bg-muted/80 font-medium"
+          ]}
+        >
+          每日分享
         </a>
         <a
           href="/rss.xml"
