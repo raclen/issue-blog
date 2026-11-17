@@ -7,7 +7,7 @@ import FuwariProfile from "@/components/fuwari/FuwariProfile.astro";
 import FuwariToc from "@/components/fuwari/FuwariToc.astro";
 import FuwariArchiveWidget from "@/components/fuwari/FuwariArchiveWidget.astro";
 import FuwariTagsWidget from "@/components/fuwari/FuwariTagsWidget.astro";
-import { getPosts, formatDate } from "@/lib/posts";
+import { getPosts, getTagsWithCount, formatDate } from "@/lib/posts";
 import { getReadingTime } from "@/utils/readingTime";
 import { slugifyStr } from "@/utils/slugify";
 import { toTransitionName } from "@/utils/toTransitionName";
@@ -15,6 +15,7 @@ import { getTagUrl } from "@/utils/tagUrl";
 import BackToTopButton from "./_components/BackToTopButton.astro";
 import AdjacentPostNav from "./_components/AdjacentPostNav.astro";
 import GiscusComments from "./_components/GiscusComments.astro";
+import OutdatedNotice from "./_components/OutdatedNotice.astro";
 import config from "@/config";
 
 export async function getStaticPaths() {
@@ -87,22 +88,13 @@ if (headings.length === 0 && post.body) {
 }
 
 // 提取全站标签统计
-const tagCounts = new Map<string, number>();
+const tagsWithCount = getTagsWithCount(allPosts);
 const yearsMap = new Map<string, number>();
 
 allPosts.forEach(p => {
-  p.data.tags.forEach(t => {
-    tagCounts.set(t, (tagCounts.get(t) ?? 0) + 1);
-  });
-
   const year = p.data.pubDate.getFullYear().toString();
   yearsMap.set(year, (yearsMap.get(year) ?? 0) + 1);
 });
-
-const tagsWithCount = Array.from(tagCounts, ([tag, count]) => ({
-  tag,
-  count,
-})).sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag, "zh-CN"));
 
 const yearsList = Array.from(yearsMap, ([year, count]) => ({
   year,
@@ -238,6 +230,9 @@ const hasHeadings = filteredHeadings.length > 0;
           >
             <Content />
           </div>
+
+          <!-- 文章过期提示：发表大于100天展示黄色提醒 -->
+          <OutdatedNotice pubDatetime={pubDate} />
 
           <!-- 文章底部标签 -->
           {tags.length > 0 && (

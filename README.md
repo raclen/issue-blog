@@ -25,17 +25,18 @@ Issue Blog 适合想写博客、沉淀技术笔记、发布项目日志，但不
 - **发布链路短**：给 Issue 加 `blog` 标签即可进入博客，不需要额外后台操作。
 - **部署成本低**：Astro 生成静态站点，Cloudflare 托管，适合长期运行。
 - **适合个人和小团队**：个人博客、项目更新、知识库、开发日志都能用。
-- **不绑定平台**：文章是 Markdown，站点是普通 Astro 项目，后续可以自由改主题、加搜索、加评论。
+- **不绑定平台**：文章是 Markdown，站点是普通 Astro 项目，内置主题、搜索与讨论入口，后续可以自由扩展。
 
 ## 特色
 
-- GitHub Issues 同步文章
-- `blog` 标签筛选发布内容
-- Issue 其他标签自动转为文章标签
-- 支持固定 `pubDate` 和 `updatedDate`
-- 自动生成文章详情页和 RSS
-- GitHub Actions 自动同步并提交 Markdown
-- 支持 Cloudflare 一键部署
+- GitHub Issues 同步文章，`blog` 标签筛选发布内容，其他标签转为文章标签
+- Fuwari 风格卡片布局，包含作者资料、标签统计、年份归档与文章目录
+- Pagefind 全文搜索、浅色 / 深色主题、阅读进度、字数 / 阅读时长、代码复制与相邻文章导航
+- 支持固定 `pubDate` 和 `updatedDate`，自动生成文章详情页、RSS 和 sitemap
+- 文章发表超过 **100 个完整日** 后，结尾显示黄色信息时效提醒；浏览器打开页面时重新计算天数
+- 每日分享栏目：按月维护 Markdown，提供日目录、日期锚点和月份翻页
+- 默认引导读者到原 GitHub Issue 讨论，也可配置 Giscus；不依赖模板作者的私有评论服务
+- GitHub Actions 自动同步并提交 Markdown，支持 Cloudflare 一键部署
 - 支持本地开发、构建和 Wrangler 部署
 
 ## 一键部署
@@ -112,7 +113,27 @@ Cloudflare 静态站点
 3. GitHub Actions 会在 Issue 创建、编辑、打标签、取消标签、重新打开、关闭、删除时同步，也会每天北京时间 08:00 和 20:00 定时同步。
 4. 同步结果会提交到 `src/content/blog/`。
 
-Issue 的其他标签会变成文章标签，`blog` 标签只用于筛选文章。
+Issue 的其他标签会变成文章标签，`blog` 标签只用于筛选文章。取消发布标签或关闭 Issue 后，下次同步会移除对应文章（默认只同步 open Issues）。
+
+同步提交不添加 `[skip ci]`，避免托管平台因跳过构建标记而漏掉文章部署。工作流只由 Issues 事件、定时任务和手动操作触发，不会因自己的内容提交递归执行。
+
+## 页面与主题配置
+
+| 路径 | 内容 |
+| --- | --- |
+| `/` | 博客首页、文章列表与搜索入口 |
+| `/blog/[slug]` | 文章详情、目录、过期提醒、相邻文章及 Issue 讨论入口 |
+| `/tags`、`/tags/[tag]` | 标签列表与按标签分页 |
+| `/archives` | 年份归档 |
+| `/daily`、`/daily/[month]` | 每日分享月份列表与月页 |
+| `/rss.xml` | 博客文章 RSS |
+| `/sitemap-index.xml` | 站点地图 |
+
+在 [astro-paper.config.ts](astro-paper.config.ts) 中修改 `site.title`、`site.description`、`site.author`、`site.authorBio`、`site.authorAvatar` 和 `site.profile`，替换为自己的站点与作者资料；`socials` 配置社交链接，`features.search` 控制 Pagefind 搜索，`features.lightAndDarkMode` 控制主题切换。
+
+`comments.enabled` 默认为 `false`，文章仍保留原 Issue 的讨论入口。需要站内评论时，在 [giscus.app](https://giscus.app/zh-CN) 获取自己仓库的配置，再将 `comments` 设为 `enabled: true`、`provider: "giscus"` 并填写 `repo`、`repoId`、`category`、`categoryId`；可选字段见 [src/types/config.ts](src/types/config.ts)。
+
+每日分享手工维护在 `src/content/daily/YYYY-MM.md`，与 Issues 同步的博客文章相互独立，不会被同步脚本覆盖。每个文件对应一个月，条目格式和示例见 [src/content/daily/2026-11.md](src/content/daily/2026-11.md)；解析器见 [src/utils/parseDaily.ts](src/utils/parseDaily.ts)。新增月份文件后重新构建即可生成月页。
 
 ## 适合用来做什么
 
@@ -129,14 +150,40 @@ Issue 的其他标签会变成文章标签，`blog` 标签只用于筛选文章�
 
 ## 本地开发
 
-```bash
-npm install          # 安装依赖
-npm run dev          # 本地开发（默认 http://localhost:4321）
-npm run build        # 构建到 dist/
-npm run deploy       # 构建并部署到 Cloudflare
+使用 Node.js 22，按锁文件安装依赖：
 
-# 手动同步指定仓库的 Issues
-ISSUE_REPO=OWNER/REPO GITHUB_TOKEN=YOUR_TOKEN npm run sync:issues
+```bash
+npm ci
+```
+
+本地开发（默认 `http://localhost:4321`）：
+
+```bash
+npm run dev
+```
+
+类型检查并构建到 `dist/`，同时生成 Pagefind 索引：
+
+```bash
+npm run build
+```
+
+预览构建产物：
+
+```bash
+npm run preview
+```
+
+构建并部署到自己的 Cloudflare 账号：
+
+```bash
+npm run deploy
+```
+
+手动同步指定仓库的 Issues（在本地环境配置 Token，不要写入仓库）：
+
+```bash
+ISSUE_REPO=OWNER/REPO npm run sync:issues
 ```
 
 ## Issue 元数据
@@ -160,7 +207,7 @@ updatedDate: 2026-06-27
 - `ISSUE_LABEL`：文章标签，默认是 `blog`。
 - `ISSUE_STATE`：Issue 状态，默认是 `open`。
 - `GITHUB_TOKEN`：GitHub API Token，本地同步私有仓库或提高限额时使用。
-- `SITE_URL`：Astro 构建时的网站地址，影响 RSS 链接。
+- `SITE_URL`：Astro 构建时的网站地址，影响 canonical、RSS 和 sitemap 的绝对链接。
 
 ## 目录
 
@@ -171,10 +218,15 @@ issue-blog/
 │   └── workflows/sync-issues.yml
 ├── scripts/sync-issues.js
 ├── src/
-│   ├── content/blog/
+│   ├── components/fuwari/      主题卡片、侧栏与搜索组件
+│   ├── content/
+│   │   ├── blog/              Issues 自动同步文章
+│   │   └── daily/             按月手工维护的每日分享
+│   ├── content.config.ts      blog 与 daily 集合
 │   ├── layouts/
-│   ├── lib/
-│   └── pages/
+│   ├── lib/posts.ts           模板博客文章与日期适配
+│   ├── pages/                 首页、文章、标签、归档、每日分享与 RSS
+│   └── utils/parseDaily.ts     每日分享解析器
 ├── .npmrc
 ├── .node-version
 ├── astro.config.mjs

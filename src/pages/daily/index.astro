@@ -1,0 +1,102 @@
+---
+import { getCollection } from "astro:content";
+import FuwariBlogLayout from "@/layouts/FuwariBlogLayout.astro";
+import { getPosts, getTagsWithCount } from "@/lib/posts";
+import { parseDailyMonth } from "@/utils/parseDaily";
+import config from "@/config";
+
+// 侧栏统计沿用博客口径，避免显示成 0
+const sortedPosts = await getPosts();
+const tags = getTagsWithCount(sortedPosts);
+const yearsMap = new Map<string, number>();
+sortedPosts.forEach(post => {
+  const year = String(post.data.pubDate.getFullYear());
+  yearsMap.set(year, (yearsMap.get(year) || 0) + 1);
+});
+const years = Array.from(yearsMap, ([year, count]) => ({ year, count })).sort(
+  (a, b) => Number(b.year) - Number(a.year)
+);
+
+// 月份列表：2026-10 字符串倒序即时间倒序
+const months = (await getCollection("daily"))
+  .filter(entry => !entry.data.draft)
+  .map(entry => parseDailyMonth(entry.id, entry.body ?? "", entry.data.title))
+  .sort((a, b) => (a.month < b.month ? 1 : -1));
+
+const totalEntries = months.reduce((sum, m) => sum + m.entryCount, 0);
+---
+
+<FuwariBlogLayout
+  title={`每日分享 | ${config.site.title}`}
+  description={`按月归档的每日分享，共 ${months.length} 个月、${totalEntries} 条。`}
+  postsCount={sortedPosts.length}
+  years={years}
+  tags={tags}
+  showBanner={false}
+>
+  <!-- 栏目说明 -->
+  <div class="fuwari-card p-5 sm:p-8 border border-border/80 mb-4">
+    <div class="flex items-center justify-between pb-4 border-b border-border/60">
+      <div class="flex items-center gap-2 font-bold text-base sm:text-lg text-foreground">
+        <span class="w-1.5 h-4 rounded-full bg-accent"></span>
+        <span>每日分享</span>
+      </div>
+      <span class="text-xs text-muted-foreground font-mono">
+        {months.length} 个月 · {totalEntries} 条
+      </span>
+    </div>
+    <p class="text-xs sm:text-sm text-muted-foreground mt-4 leading-relaxed">
+      一天两三条，随手记下用得上的工具、站点和零碎想法，按月归档成一页。
+    </p>
+  </div>
+
+  <!-- 月份卡片流 -->
+  <div class="space-y-4">
+    {
+      months.map((m, index) => (
+        <a
+          href={`/daily/${m.month}/`}
+          class:list={[
+            "fuwari-card fuwari-card-hover group relative block p-5 border border-border/70 overflow-hidden",
+            index === 0 && "bg-accent/[0.04]",
+          ]}
+        >
+          <div class="fuwari-accent-bar" />
+          <div class="flex items-center justify-between gap-3">
+            <div class="min-w-0">
+              <div class="flex items-center gap-2">
+                <h2 class="text-base sm:text-lg font-bold tracking-tight text-foreground group-hover:text-accent transition-colors">
+                  {m.label}
+                </h2>
+                {index === 0 && (
+                  <span class="px-2 py-0.5 rounded-full bg-accent/15 text-accent text-[10px] font-mono shrink-0">
+                    最新
+                  </span>
+                )}
+              </div>
+              <p class="text-xs text-muted-foreground font-mono mt-1.5">
+                {m.days.length} 天 · {m.entryCount} 条
+              </p>
+            </div>
+            <svg
+              class="w-4 h-4 text-muted-foreground shrink-0 group-hover:text-accent group-hover:translate-x-1 transition-all"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+        </a>
+      ))
+    }
+    {
+      months.length === 0 && (
+        <div class="fuwari-card p-6 text-center text-sm text-muted-foreground">
+          还没有内容，新建 <code>src/content/daily/YYYY-MM.md</code> 即可开始。
+        </div>
+      )
+    }
+  </div>
+</FuwariBlogLayout>
